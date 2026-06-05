@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AURA-T — BOM vs CRD Checker</title>
+<style>
+  :root {
+    --bg:           #0b0d12;
+    --surface:      #111318;
+    --surface2:     #161920;
+    --border:       #1e2535;
+    --border2:      #252d3e;
+    --text:         #e0e7ef;
+    --muted:        #556277;
+    --primary:      #3b82f6;
+    --primary-h:    #2563eb;
+    --accent:       #00d68f;
+    --pass-bg:      rgba(0,214,143,.12);
+    --pass-fg:      #00d68f;
+    --pass-border:  rgba(0,214,143,.3);
+    --fail-bg:      rgba(248,68,68,.12);
+    --fail-fg:      #f84444;
+    --fail-border:  rgba(248,68,68,.3);
+    --warn-bg:      rgba(251,191,36,.12);
+    --warn-fg:      #fbbf24;
+    --warn-border:  rgba(251,191,36,.3);
+    --grey-bg:      #161920;
+    --grey-fg:      #7d8fa3;
+    --grey-border:  #1e2535;
+    --radius:       8px;
+    --shadow:       0 2px 12px rgba(0,0,0,.6);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    background: linear-gradient(135deg, #060810 0%, #0e1628 50%, #060810 100%);
+    border-bottom: 1px solid var(--border2);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    height: 60px;
+    box-shadow: 0 2px 16px rgba(0,0,0,.8);
+    position: relative;
+  }
+  header::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: .35;
+  }
+  header h1 { font-size: 1.1rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+  header .sub { font-size: .72rem; color: var(--muted); font-family: 'Courier New', monospace; }
+  header .badge {
+    margin-left: auto;
+    background: rgba(0,214,143,.08);
+    border: 1px solid rgba(0,214,143,.25);
+    border-radius: 999px;
+    padding: 2px 12px;
+    font-size: .68rem;
+    color: var(--accent);
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+
+  /* ── Search ── */
+  .search-wrap {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 1.25rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    flex-wrap: wrap;
+  }
+  .search-label { font-size: .72rem; font-weight: 700; color: var(--muted); white-space: nowrap; letter-spacing: .07em; text-transform: uppercase; }
+  #pnInput {
+    flex: 1 1 300px;
+    max-width: 480px;
+    padding: .55rem .9rem;
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    font-size: .95rem;
+    font-family: 'Courier New', monospace;
+    outline: none;
+    background: var(--surface2);
+    color: var(--text);
+    transition: border-color .15s, box-shadow .15s;
+  }
+  #pnInput:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,.12); }
+  #pnInput::placeholder { font-family: -apple-system, sans-serif; color: var(--muted); }
+  #searchBtn {
+    padding: .55rem 1.4rem;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-size: .875rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    letter-spacing: .04em;
+    box-shadow: 0 0 14px rgba(59,130,246,.35);
+    transition: background .15s, transform .1s, box-shadow .15s;
+  }
+  #searchBtn:hover   { background: var(--primary-h); box-shadow: 0 0 20px rgba(59,130,246,.55); }
+  #searchBtn:active  { transform: scale(.97); }
+  #searchBtn:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+  .hint { font-size: .73rem; color: var(--muted); width: 100%; margin-top: -.25rem; }
+
+  /* ── Layout ── */
+  .app-body { display: flex; align-items: flex-start; min-height: calc(100vh - 121px); }
+  main { flex: 1; min-width: 0; padding: 1.5rem 2rem; }
+
+  /* ── Tabs ── */
+  .tabs { display: flex; gap: .25rem; border-bottom: 1px solid var(--border); margin-bottom: 1.25rem; }
+  .tab-btn {
+    padding: .6rem 1.1rem;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    font-size: .75rem;
+    font-weight: 700;
+    color: var(--muted);
+    cursor: pointer;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    transition: color .15s, border-color .15s;
+  }
+  .tab-btn:hover  { color: var(--text); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-btn .cnt {
+    display: inline-block;
+    background: var(--border2);
+    border-radius: 999px;
+    padding: 1px 7px;
+    font-size: .67rem;
+    margin-left: .35rem;
+  }
+  .tab-btn.active .cnt { background: rgba(0,214,143,.15); color: var(--accent); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── Overview ── */
+  .overview-grid { display: grid; grid-template-columns: auto 1fr; gap: 1.5rem; align-items: start; }
+  @media (max-width: 640px) { .overview-grid { grid-template-columns: 1fr; } }
+  .score-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.75rem 2rem;
+    box-shadow: var(--shadow);
+    text-align: center;
+    min-width: 220px;
+  }
+  .score-card .label { font-size: .68rem; font-weight: 700; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; margin-bottom: .75rem; }
+  .gauge-wrap { position: relative; width: 140px; height: 140px; margin: 0 auto .75rem; }
+  .gauge-wrap svg { transform: rotate(-90deg); }
+  .gauge-bg   { fill: none; stroke: var(--border2); stroke-width: 10; }
+  .gauge-fill { fill: none; stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset .6s ease; }
+  .gauge-text { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; }
+  .gauge-pct  { font-size: 2rem; font-weight: 800; }
+  .gauge-sub  { font-size: .63rem; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+  .status-pill { display: inline-block; padding: .35rem 1.1rem; border-radius: 999px; font-size: .78rem; font-weight: 800; letter-spacing: .07em; }
+
+  .stat-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: .75rem; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; box-shadow: var(--shadow); }
+  .stat-card .val { font-size: 1.75rem; font-weight: 800; line-height: 1; }
+  .stat-card .lbl { font-size: .68rem; color: var(--muted); margin-top: .3rem; text-transform: uppercase; letter-spacing: .05em; }
+  .stat-card.pass { border-left: 3px solid var(--pass-fg); }
+  .stat-card.fail { border-left: 3px solid var(--fail-fg); }
+  .stat-card.warn { border-left: 3px solid var(--warn-fg); }
+  .stat-card.info { border-left: 3px solid var(--primary); }
+
+  .meta-row { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: .85rem 1.1rem; margin-bottom: 1rem; display: flex; flex-wrap: wrap; gap: 1.5rem; font-size: .875rem; box-shadow: var(--shadow); }
+  .meta-row .item { display: flex; flex-direction: column; gap: 2px; }
+  .meta-row .item .k { font-size: .63rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+  .meta-row .item .v { font-family: 'Courier New', monospace; font-weight: 700; color: var(--accent); }
+
+  /* ── Tables ── */
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+  thead th { background: var(--surface2); border-bottom: 1px solid var(--border2); padding: .65rem .85rem; text-align: left; font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); white-space: nowrap; position: sticky; top: 0; }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2) !important; cursor: pointer; }
+  tbody td { padding: .6rem .85rem; vertical-align: top; }
+  tbody td.mono { font-family: 'Courier New', monospace; font-size: .8rem; color: #a5b4fc; }
+  .row-pass { background: rgba(0,214,143,.04); }
+  .row-fail { background: rgba(248,68,68,.05); }
+  .row-bom  { background: rgba(59,130,246,.04); }
+  .row-crd  { background: rgba(139,92,246,.04); }
+
+  .badge-pass { display:inline-block;padding:2px 8px;border-radius:999px;background:var(--pass-bg);color:var(--pass-fg);border:1px solid var(--pass-border);font-size:.68rem;font-weight:700;letter-spacing:.04em; }
+  .badge-fail { display:inline-block;padding:2px 8px;border-radius:999px;background:var(--fail-bg);color:var(--fail-fg);border:1px solid var(--fail-border);font-size:.68rem;font-weight:700;letter-spacing:.04em; }
+  .badge-warn { display:inline-block;padding:2px 8px;border-radius:999px;background:var(--warn-bg);color:var(--warn-fg);border:1px solid var(--warn-border);font-size:.68rem;font-weight:700;letter-spacing:.04em; }
+  .badge-grey { display:inline-block;padding:2px 8px;border-radius:999px;background:var(--grey-bg);color:var(--grey-fg);border:1px solid var(--grey-border);font-size:.68rem;font-weight:700;letter-spacing:.04em; }
+  .badge-bom  { display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(59,130,246,.15);color:#60a5fa;border:1px solid rgba(59,130,246,.3);font-size:.68rem;font-weight:700; }
+  .badge-crd  { display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(139,92,246,.15);color:#a78bfa;border:1px solid rgba(139,92,246,.3);font-size:.68rem;font-weight:700; }
+
+  .score-bar  { display:flex;align-items:center;gap:.5rem; }
+  .score-track{ flex:1;height:5px;background:var(--border2);border-radius:999px;min-width:60px;max-width:90px;overflow:hidden; }
+  .score-fill { height:100%;border-radius:999px;transition:width .4s ease; }
+  .score-num  { font-size:.73rem;font-weight:700;min-width:34px;text-align:right; }
+
+  .section-title { font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:1.25rem 0 .5rem; }
+
+  /* ── States ── */
+  .state-box { background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:3rem;text-align:center;color:var(--muted);box-shadow:var(--shadow); }
+  .state-box .icon { font-size:2.5rem;margin-bottom:.75rem; }
+  .state-box h3 { font-size:1.05rem;color:var(--text);margin-bottom:.4rem;font-weight:700; }
+  .state-box p  { font-size:.875rem; }
+  .state-box.error { border-color:var(--fail-border);background:var(--fail-bg); }
+  .state-box.error h3 { color:var(--fail-fg); }
+
+  .spinner { width:36px;height:36px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto .75rem; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  .crd-ref-row { background:rgba(251,191,36,.06) !important; }
+
+  .ver-compare { display:flex;flex-direction:column;gap:3px; }
+  .ver-compare .ver-row { display:flex;align-items:center;gap:.4rem; }
+  .ver-compare .ver-tag { font-size:.62rem;font-weight:700;letter-spacing:.04em;padding:1px 5px;border-radius:3px;flex-shrink:0; }
+  .ver-compare .bom-tag { background:rgba(59,130,246,.2);color:#93c5fd; }
+  .ver-compare .crd-tag { background:rgba(139,92,246,.2);color:#c4b5fd; }
+  .ver-compare .ver-val { font-family:'Courier New',monospace;font-size:.78rem;word-break:break-all;color:var(--text); }
+
+  hr.divider { border:none;border-top:1px solid var(--border);margin:1rem 0; }
+
+  /* ── Comparison toolbar ── */
+  .comparison-toolbar { display:flex;align-items:center;gap:.6rem;margin-bottom:1rem;flex-wrap:wrap; }
+  .filter-btns { display:flex;gap:.3rem;flex-wrap:wrap; }
+  .filter-btn { padding:.28rem .72rem;border:1px solid var(--border2);border-radius:999px;background:var(--surface2);color:var(--muted);font-size:.68rem;font-weight:700;cursor:pointer;letter-spacing:.05em;text-transform:uppercase;transition:all .15s; }
+  .filter-btn:hover { color:var(--text); }
+  .filter-btn.active      { background:rgba(59,130,246,.15);border-color:var(--primary);color:var(--primary); }
+  .filter-btn.pass.active { background:var(--pass-bg);border-color:var(--pass-border);color:var(--pass-fg); }
+  .filter-btn.fail.active { background:var(--fail-bg);border-color:var(--fail-border);color:var(--fail-fg); }
+  .filter-btn.bom.active  { background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.3);color:#60a5fa; }
+  .filter-btn.crd.active  { background:rgba(139,92,246,.12);border-color:rgba(139,92,246,.3);color:#a78bfa; }
+  #tableSearch { flex:1;min-width:160px;max-width:240px;padding:.3rem .7rem;border:1px solid var(--border2);border-radius:var(--radius);background:var(--surface2);color:var(--text);font-size:.8rem;outline:none;transition:border-color .15s; }
+  #tableSearch:focus { border-color:var(--primary); }
+  #tableSearch::placeholder { color:var(--muted); }
+  .export-btn { margin-left:auto;padding:.3rem .9rem;border:1px solid rgba(0,214,143,.25);border-radius:var(--radius);background:rgba(0,214,143,.06);color:var(--accent);font-size:.72rem;font-weight:700;cursor:pointer;letter-spacing:.04em;display:flex;align-items:center;gap:.4rem;transition:all .15s; }
+  .export-btn:hover { background:rgba(0,214,143,.14); }
+
+  /* ── Anomaly Sidebar ── */
+  .anomaly-sidebar { width:256px;flex-shrink:0;border-left:1px solid var(--border);background:var(--surface);min-height:calc(100vh - 121px);display:flex;flex-direction:column; }
+  .sidebar-header { padding:.85rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface2); }
+  .sidebar-title { font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--muted); }
+  .sidebar-badge { border-radius:999px;padding:1px 8px;font-size:.68rem;font-weight:700; }
+  .sidebar-badge.has-issues { background:var(--fail-bg);color:var(--fail-fg);border:1px solid var(--fail-border); }
+  .sidebar-badge.all-clear  { background:var(--pass-bg);color:var(--pass-fg);border:1px solid var(--pass-border); }
+  .sidebar-list { flex:1;overflow-y:auto; }
+  .sidebar-item { padding:.7rem 1rem;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s; }
+  .sidebar-item:hover { background:var(--surface2); }
+  .sidebar-item-type { font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px; }
+  .sidebar-item-loc { font-family:'Courier New',monospace;font-size:.78rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+  .sidebar-item-detail { font-size:.7rem;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+  .sidebar-all-pass { padding:2rem 1rem;text-align:center;color:var(--pass-fg);font-size:.78rem;font-weight:700;letter-spacing:.04em; }
+
+  /* ── Row Detail Modal ── */
+  .modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,.78);display:flex;align-items:center;justify-content:center;z-index:1000;backdrop-filter:blur(4px); }
+  .modal-box { background:var(--surface);border:1px solid var(--border2);border-radius:12px;box-shadow:0 24px 60px rgba(0,0,0,.85);width:90%;max-width:680px;max-height:82vh;overflow-y:auto;position:relative; }
+  .modal-header { padding:1.1rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border-radius:12px 12px 0 0;position:sticky;top:0;z-index:1; }
+  .modal-title { font-size:.95rem;font-weight:700;color:var(--text);font-family:'Courier New',monospace; }
+  .modal-close { background:none;border:none;color:var(--muted);font-size:1.4rem;cursor:pointer;line-height:1;padding:0 4px;transition:color .15s;margin-left:.75rem; }
+  .modal-close:hover { color:var(--text); }
+  .modal-body { padding:1.5rem; }
+  .modal-section { margin-bottom:1.5rem; }
+  .modal-section:last-child { margin-bottom:0; }
+  .modal-section-title { font-size:.63rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin-bottom:.7rem;padding-bottom:.4rem;border-bottom:1px solid var(--border); }
+  .modal-fields { display:grid;grid-template-columns:1fr 1fr;gap:.6rem 1rem; }
+  .modal-field .k { font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted); }
+  .modal-field .v { font-family:'Courier New',monospace;font-size:.82rem;color:var(--text);margin-top:2px;word-break:break-all; }
+  .modal-note { margin-top:1rem;font-size:.8rem;color:var(--warn-fg);padding:.6rem .8rem;background:var(--warn-bg);border:1px solid var(--warn-border);border-radius:var(--radius); }
+
+  /* ── Distribution chart ── */
+  .dist-chart { background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-top:1rem;box-shadow:var(--shadow); }
+  .dist-chart-title { font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin-bottom:1rem; }
+  .dist-bar-row { display:flex;align-items:center;gap:.75rem;margin-bottom:.65rem; }
+  .dist-bar-row:last-child { margin-bottom:0; }
+  .dist-bar-label { font-size:.68rem;color:var(--muted);width:72px;flex-shrink:0;text-transform:uppercase;letter-spacing:.05em; }
+  .dist-bar-track { flex:1;height:8px;background:var(--border2);border-radius:999px;overflow:hidden; }
+  .dist-bar-fill  { height:100%;border-radius:999px;transition:width .7s cubic-bezier(.4,0,.2,1); }
+  .dist-bar-val   { font-size:.72rem;font-weight:700;width:28px;text-align:right; }
+</style>
+</head>
+<body>
+
+<header>
+  <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+    <rect width="28" height="28" rx="6" fill="rgba(0,214,143,.08)" stroke="rgba(0,214,143,.2)" stroke-width="1"/>
+    <rect x="5" y="7" width="8" height="5" rx="1" fill="rgba(0,214,143,.75)"/>
+    <rect x="15" y="7" width="8" height="5" rx="1" fill="rgba(59,130,246,.75)"/>
+    <rect x="5" y="15" width="18" height="2" rx="1" fill="rgba(255,255,255,.2)"/>
+    <rect x="5" y="19" width="12" height="2" rx="1" fill="rgba(255,255,255,.1)"/>
+  </svg>
+  <h1>AURA-T</h1>
+  <span class="sub">BOM vs CRD</span>
+  <span class="badge">Wiwynn</span>
+</header>
+
+<!-- <div class="search-wrap">
+  <span class="search-label">Part Number</span>
+  <input id="pnInput" type="text" placeholder="e.g. M1390373-001$018" autocomplete="off" spellcheck="false"/>
+  <button id="searchBtn" onclick="runCompare()">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    </svg>
+    Search &amp; Compare
+  </button>
+  <span class="hint">Enter the BOM Parent Part Number to verify against CRD specifications</span>
+</div> -->
+
+<div class="app-body">
+  <main>
+    <div id="resultsArea">
+      <div class="state-box">
+        <div class="icon">⬡</div>
+        <h3>Enter a Part Number to Begin</h3>
+        <p>Type a BOM Parent Part Number above and click Search &amp; Compare.</p>
+      </div>
+    </div>
+  </main>
+  <div id="anomalySidebar" style="display:none" class="anomaly-sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-title">Anomalies</span>
+      <span id="sidebarBadge" class="sidebar-badge"></span>
+    </div>
+    <div id="sidebarList" class="sidebar-list"></div>
+  </div>
+</div>
+
+<!-- Row Detail Modal -->
+<div id="modalOverlay" class="modal-overlay" style="display:none" onclick="closeModal()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <span id="modalTitle" class="modal-title"></span>
+      <div style="display:flex;align-items:center;gap:.75rem">
+        <span id="modalStatus"></span>
+        <button class="modal-close" onclick="closeModal()">×</button>
+      </div>
+    </div>
+    <div id="modalBody" class="modal-body"></div>
+  </div>
+</div>
+
+<script>
+let activeTab  = 'overview';
+let lastData   = null;
+let allComps   = [];
+
+// ── Keyboard shortcuts ──────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+});
+document.getElementById('pnInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') runCompare();
+});
+
+// ── Entry point ─────────────────────────────────────────────────────────────
+async function runCompare() {
+  const pn = document.getElementById('pnInput').value.trim();
+  if (!pn) { document.getElementById('pnInput').focus(); return; }
+  setLoading(pn);
+  try {
+    const res  = await fetch('/api/compare', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ partNumber: pn })
+    });
+    const data = await res.json();
+    if (!res.ok) { setError(data.error || `HTTP ${res.status}`); return; }
+    lastData = data;
+    allComps = data.comparisons || [];
+    renderResults(data);
+    renderSidebar(allComps);
+  } catch (e) { setError('Network error: ' + e.message); }
+}
+
+// ── States ───────────────────────────────────────────────────────────────────
+function setLoading(pn) {
+  document.getElementById('searchBtn').disabled = true;
+  document.getElementById('anomalySidebar').style.display = 'none';
+  document.getElementById('resultsArea').innerHTML = `
+    <div class="state-box">
+      <div class="spinner"></div>
+      <h3>Searching BOM &amp; CRD…</h3>
+      <p>Querying databases for <code style="font-family:'Courier New';color:var(--accent)">${esc(pn)}</code></p>
+    </div>`;
+}
+
+function setError(msg) {
+  document.getElementById('searchBtn').disabled = false;
+  document.getElementById('anomalySidebar').style.display = 'none';
+  document.getElementById('resultsArea').innerHTML = `
+    <div class="state-box error">
+      <div class="icon">⚠</div>
+      <h3>Error</h3>
+      <p>${esc(msg)}</p>
+    </div>`;
+}
+
+// ── Render results ───────────────────────────────────────────────────────────
+function renderResults(d) {
+  document.getElementById('searchBtn').disabled = false;
+
+  if (!d.crdFound) {
+    document.getElementById('resultsArea').innerHTML = `
+      <div class="state-box" style="border-color:var(--warn-border);background:var(--warn-bg)">
+        <div class="icon">⚠</div>
+        <h3 style="color:var(--warn-fg)">No CRD Reference Found</h3>
+        <p>${esc(d.message||'')}</p>
+      </div>
+      <div class="section-title" style="margin-top:1.25rem">BOM Data — ${d.bomData.length} rows</div>
+      <div class="table-wrap">${buildRawTable(d.bomData)}</div>`;
+    return;
+  }
+
+  if (!d.crdDataFound) {
+    document.getElementById('resultsArea').innerHTML = `
+      <div class="state-box" style="border-color:var(--warn-border);background:var(--warn-bg)">
+        <div class="icon">⚠</div>
+        <h3 style="color:var(--warn-fg)">CRD Specs Not Found</h3>
+        <p>${esc(d.message||'')}</p>
+      </div>
+      <div class="section-title" style="margin-top:1.25rem">BOM Data — ${d.bomData.length} rows</div>
+      <div class="table-wrap">${buildRawTable(d.bomData)}</div>`;
+    return;
+  }
+
+  const tabs = [
+    { id: 'overview',   label: 'Overview' },
+    { id: 'comparison', label: 'Comparison', count: d.comparisons.filter(c=>c.type==='MATCHED').length },
+    { id: 'bom-data',   label: 'BOM Data',   count: d.bomData.length },
+    { id: 'crd-specs',  label: 'CRD Specs',  count: d.crdData.length },
+  ];
+
+  const tabsHTML = tabs.map(t => `
+    <button class="tab-btn${activeTab===t.id?' active':''}" onclick="switchTab('${t.id}')">
+      ${esc(t.label)}${t.count!=null?`<span class="cnt">${t.count}</span>`:''}
+    </button>`).join('');
+
+  document.getElementById('resultsArea').innerHTML = `
+    <div class="tabs">${tabsHTML}</div>
+    <div id="tab-overview"   class="tab-panel${activeTab==='overview'  ?' active':''}">
+      ${buildOverviewPanel(d)}
+    </div>
+    <div id="tab-comparison" class="tab-panel${activeTab==='comparison'?' active':''}">
+      ${buildComparisonToolbar()}
+      <div id="compTableWrap"></div>
+    </div>
+    <div id="tab-bom-data"   class="tab-panel${activeTab==='bom-data'  ?' active':''}">
+      <div class="table-wrap">${buildRawTable(d.bomData, d.crdRefRow)}</div>
+    </div>
+    <div id="tab-crd-specs"  class="tab-panel${activeTab==='crd-specs' ?' active':''}">
+      <div class="table-wrap">${buildCrdTable(d.crdData)}</div>
+    </div>`;
+
+  drawGauge(d.overallScore, d.overallStatus);
+  renderCompTable('ALL', '');
+}
+
+// ── Tab switching ────────────────────────────────────────────────────────────
+function switchTab(id) {
+  activeTab = id;
+  document.querySelectorAll('.tab-btn').forEach(b =>
+    b.classList.toggle('active', b.textContent.trim().startsWith(id === 'overview' ? 'Overview' : id === 'comparison' ? 'Comparison' : id === 'bom-data' ? 'BOM' : 'CRD'))
+  );
+  document.querySelectorAll('.tab-panel').forEach(p =>
+    p.classList.toggle('active', p.id === 'tab-' + id)
+  );
+  if (id === 'overview' && lastData) drawGauge(lastData.overallScore, lastData.overallStatus);
+}
+
+// ── Overview panel ───────────────────────────────────────────────────────────
+function buildOverviewPanel(d) {
+  const pillClass = d.overallStatus==='PASS' ? 'badge-pass' : d.overallStatus==='WARNING' ? 'badge-warn' : 'badge-fail';
+  const sc = d.overallStatus==='PASS' ? 'var(--pass-fg)' : d.overallStatus==='WARNING' ? 'var(--warn-fg)' : 'var(--fail-fg)';
+  const total = (d.passCount + d.failCount + d.bomOnlyCount + d.crdOnlyCount) || 1;
+  function bar(label, val, color) {
+    const pct = (val/total)*100;
+    const c = val > 0 ? color : 'var(--muted)';
+    return `<div class="dist-bar-row">
+      <div class="dist-bar-label">${label}</div>
+      <div class="dist-bar-track"><div class="dist-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+      <div class="dist-bar-val" style="color:${c}">${val}</div>
+    </div>`;
+  }
+  return `
+    <div class="meta-row">
+      <div class="item"><span class="k">BOM Part Number</span><span class="v">${esc(d.partNumber)}</span></div>
+      <div class="item"><span class="k">CRD Spec Number</span><span class="v">${esc(d.crdPN)}</span></div>
+      <div class="item"><span class="k">BOM Rows</span><span class="v">${d.bomData.length}</span></div>
+      <div class="item"><span class="k">CRD Lines</span><span class="v">${d.crdData.length}</span></div>
+    </div>
+    <div class="overview-grid">
+      <div class="score-card">
+        <div class="label">Configuration Score</div>
+        <div class="gauge-wrap">
+          <svg width="140" height="140" viewBox="0 0 140 140">
+            <circle class="gauge-bg" cx="70" cy="70" r="54"/>
+            <circle class="gauge-fill" id="gaugeFill" cx="70" cy="70" r="54" stroke="${sc}" stroke-dasharray="339.3" stroke-dashoffset="339.3"/>
+          </svg>
+          <div class="gauge-text">
+            <span class="gauge-pct" id="gaugePct" style="color:${sc}">—</span>
+            <span class="gauge-sub">match score</span>
+          </div>
+        </div>
+        <span class="${pillClass} status-pill">${esc(d.overallStatus)}</span>
+        <div style="margin-top:.6rem;font-size:.72rem;color:var(--muted)">Threshold: ≥ 90% = PASS</div>
+      </div>
+      <div>
+        <div class="stat-cards">
+          <div class="stat-card info"><div class="val">${d.totalMatched}</div><div class="lbl">Pairs Compared</div></div>
+          <div class="stat-card pass"><div class="val" style="color:var(--pass-fg)">${d.passCount}</div><div class="lbl">Passed (≥90%)</div></div>
+          <div class="stat-card fail"><div class="val" style="color:var(--fail-fg)">${d.failCount}</div><div class="lbl">Failed (&lt;90%)</div></div>
+          <div class="stat-card warn"><div class="val" style="color:var(--warn-fg)">${d.bomOnlyCount}</div><div class="lbl">BOM Only</div></div>
+          <div class="stat-card warn"><div class="val" style="color:var(--warn-fg)">${d.crdOnlyCount}</div><div class="lbl">CRD Only</div></div>
+        </div>
+        <div class="dist-chart">
+          <div class="dist-chart-title">Anomaly Distribution</div>
+          ${bar('Pass',    d.passCount,    'var(--pass-fg)')}
+          ${bar('Fail',    d.failCount,    'var(--fail-fg)')}
+          ${bar('BOM Only',d.bomOnlyCount, '#60a5fa')}
+          ${bar('CRD Only',d.crdOnlyCount, '#a78bfa')}
+        </div>
+      </div>
+    </div>`;
+}
+
+function drawGauge(score, status) {
+  requestAnimationFrame(() => {
+    const fill = document.getElementById('gaugeFill');
+    const pct  = document.getElementById('gaugePct');
+    if (!fill || !pct) return;
+    fill.style.strokeDashoffset = 339.3 * (1 - score / 100);
+    pct.textContent = score.toFixed(1) + '%';
+  });
+}
+
+// ── Comparison toolbar ────────────────────────────────────────────────────────
+let activeFilter = 'ALL';
+
+function buildComparisonToolbar() {
+  return `<div class="comparison-toolbar">
+    <div class="filter-btns">
+      <button class="filter-btn active"       onclick="setFilter('ALL',  this)">All</button>
+      <button class="filter-btn pass"          onclick="setFilter('PASS', this)">Pass</button>
+      <button class="filter-btn fail"          onclick="setFilter('FAIL', this)">Fail</button>
+      <button class="filter-btn bom"           onclick="setFilter('BOM',  this)">BOM Only</button>
+      <button class="filter-btn crd"           onclick="setFilter('CRD',  this)">CRD Only</button>
+    </div>
+    <input id="tableSearch" type="text" placeholder="Search location, PN, version…" oninput="renderCompTable(activeFilter, this.value)"/>
+    <button class="export-btn" onclick="exportCSV()">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      Export CSV
+    </button>
+  </div>`;
+}
+
+function setFilter(f, btn) {
+  activeFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderCompTable(f, document.getElementById('tableSearch')?.value || '');
+}
+
+function renderCompTable(filter, search) {
+  const wrap = document.getElementById('compTableWrap');
+  if (!wrap || !lastData) return;
+
+  const q = (search || '').trim().toLowerCase();
+  const comps = lastData.comparisons;
+  const matched = comps.filter(c => c.type === 'MATCHED');
+  const bomOnly = comps.filter(c => c.type === 'BOM_ONLY');
+  const crdOnly = comps.filter(c => c.type === 'CRD_ONLY');
+
+  function matchQ(c) {
+    if (!q) return true;
+    return [(c.bomLocation||''),(c.crdItem||''),(c.bomChildPN||''),(c.crdVersion||''),(c.bomVersion||'')]
+      .some(v => v.toLowerCase().includes(q));
+  }
+
+  const showM = filter === 'ALL' || filter === 'PASS' || filter === 'FAIL';
+  const showB = filter === 'ALL' || filter === 'BOM';
+  const showC = filter === 'ALL' || filter === 'CRD';
+
+  const fm = matched.filter(c => {
+    if (filter === 'PASS' && c.status !== 'PASS') return false;
+    if (filter === 'FAIL' && c.status !== 'FAIL') return false;
+    return matchQ(c);
+  });
+  const fb = bomOnly.filter(matchQ);
+  const fc = crdOnly.filter(matchQ);
+
+  let html = '';
+
+  if (showM && fm.length) {
+    html += `<div class="table-wrap"><table>
+      <thead><tr><th>#</th><th>BOM Location</th><th>CRD Item</th><th>BOM Version (ChildPN · ChildRev)</th><th>CRD Version</th><th>Match %</th><th>Status</th></tr></thead>
+      <tbody>${fm.map((c,i) => `
+        <tr class="${c.status==='PASS'?'row-pass':'row-fail'}" onclick='openModal(${JSON.stringify(JSON.stringify(c))})' title="Click for details">
+          <td style="color:var(--muted);font-size:.75rem">${i+1}</td>
+          <td class="mono">${esc(c.bomLocation||'—')}</td>
+          <td>${esc(c.crdItem||'—')}${c.crdGroup?`<div style="font-size:.7rem;color:var(--muted)">${esc(c.crdGroup)}</div>`:''}</td>
+          <td><div class="ver-compare">
+            <div class="ver-row"><span class="ver-tag bom-tag">PN</span><span class="ver-val">${esc(c.bomChildPN||'—')}</span></div>
+            <div class="ver-row"><span class="ver-tag bom-tag">REV</span><span class="ver-val">${esc(c.bomChildRev||'—')}</span></div>
+          </div></td>
+          <td class="mono">${esc(c.crdVersion||'—')}</td>
+          <td><div class="score-bar">
+            <div class="score-track"><div class="score-fill" style="width:${c.versionScore}%;background:${scoreColor(c.versionScore)}"></div></div>
+            <span class="score-num" style="color:${scoreColor(c.versionScore)}">${c.versionScore}%</span>
+          </div></td>
+          <td><span class="${c.status==='PASS'?'badge-pass':'badge-fail'}">${c.status}</span>
+            <div style="font-size:.7rem;color:var(--muted);margin-top:2px">${esc(c.statusDetail||'')}</div></td>
+        </tr>`).join('')}
+      </tbody></table></div>`;
+  }
+
+  if (showB && fb.length) {
+    html += `<div class="section-title">BOM Items with No CRD Match (${fb.length})</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>BOM Location</th><th>Child PN</th><th>Child Revision</th><th>Note</th></tr></thead>
+      <tbody>${fb.map(c => `
+        <tr class="row-bom" onclick='openModal(${JSON.stringify(JSON.stringify(c))})' title="Click for details">
+          <td class="mono">${esc(c.bomLocation||'—')}</td>
+          <td class="mono">${esc(c.bomChildPN||'—')}</td>
+          <td class="mono">${esc(c.bomChildRev||'—')}</td>
+          <td><span class="badge-bom">BOM ONLY</span></td>
+        </tr>`).join('')}
+      </tbody></table></div>`;
+  }
+
+  if (showC && fc.length) {
+    html += `<div class="section-title">CRD Specs with No BOM Match (${fc.length})</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>CRD Item</th><th>Group</th><th>Version</th><th>Notes</th><th>Note</th></tr></thead>
+      <tbody>${fc.map(c => `
+        <tr class="row-crd" onclick='openModal(${JSON.stringify(JSON.stringify(c))})' title="Click for details">
+          <td>${esc(c.crdItem||'—')}</td>
+          <td style="color:var(--muted)">${esc(c.crdGroup||'')}</td>
+          <td class="mono">${esc(c.crdVersion||'—')}</td>
+          <td style="font-size:.78rem;color:var(--muted)">${esc(c.crdNotes||'')}</td>
+          <td><span class="badge-crd">CRD ONLY</span></td>
+        </tr>`).join('')}
+      </tbody></table></div>`;
+  }
+
+  if (!html) {
+    html = `<div class="state-box" style="padding:1.5rem"><p>No items match the current filter.</p></div>`;
+  }
+
+  wrap.innerHTML = html;
+}
+
+// ── Anomaly Sidebar ──────────────────────────────────────────────────────────
+function renderSidebar(comps) {
+  if (!comps || !comps.length) return;
+  const sidebar = document.getElementById('anomalySidebar');
+  const badge   = document.getElementById('sidebarBadge');
+  const list    = document.getElementById('sidebarList');
+  sidebar.style.display = 'flex';
+
+  const anomalies = comps.filter(c => c.status !== 'PASS');
+  badge.textContent = anomalies.length;
+  badge.className   = 'sidebar-badge ' + (anomalies.length > 0 ? 'has-issues' : 'all-clear');
+
+  if (!anomalies.length) {
+    list.innerHTML = '<div class="sidebar-all-pass">All checks passed</div>';
+    return;
+  }
+
+  list.innerHTML = anomalies.map(c => {
+    const isMismatch = c.type === 'MATCHED';
+    const isBomOnly  = c.type === 'BOM_ONLY';
+    const color  = isMismatch ? 'var(--fail-fg)' : isBomOnly ? '#60a5fa' : '#a78bfa';
+    const label  = isMismatch ? 'Mismatch' : isBomOnly ? 'BOM Only' : 'CRD Only';
+    const loc    = esc(c.bomLocation || c.crdItem || '—');
+    const detail = isMismatch
+      ? esc(c.statusDetail||'')
+      : isBomOnly ? `PN: ${esc(c.bomChildPN||'—')}` : `Ver: ${esc(c.crdVersion||'—')}`;
+    return `<div class="sidebar-item" onclick='openModal(${JSON.stringify(JSON.stringify(c))})'>
+      <div class="sidebar-item-type" style="color:${color}">${label}</div>
+      <div class="sidebar-item-loc">${loc}</div>
+      <div class="sidebar-item-detail">${detail}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Row Detail Modal ─────────────────────────────────────────────────────────
+function openModal(jsonStr) {
+  const c = JSON.parse(jsonStr);
+  const overlay = document.getElementById('modalOverlay');
+  document.getElementById('modalTitle').textContent = c.bomLocation || c.crdItem || 'Detail';
+
+  const sc = c.status === 'PASS' ? 'badge-pass' : c.status === 'FAIL' ? 'badge-fail' : 'badge-grey';
+  document.getElementById('modalStatus').innerHTML = `<span class="${sc}">${c.status}</span>`;
+
+  let body = '';
+  if (c.type === 'MATCHED') {
+    const vc = c.versionScore >= 90 ? 'var(--pass-fg)' : c.versionScore >= 70 ? 'var(--warn-fg)' : 'var(--fail-fg)';
+    body = `
+      <div class="modal-section">
+        <div class="modal-section-title">BOM Data</div>
+        <div class="modal-fields">
+          <div class="modal-field"><div class="k">Location</div><div class="v">${esc(c.bomLocation||'—')}</div></div>
+          <div class="modal-field"><div class="k">Child Part Number</div><div class="v">${esc(c.bomChildPN||'—')}</div></div>
+          <div class="modal-field"><div class="k">Child Revision</div><div class="v">${esc(c.bomChildRev||'—')}</div></div>
+          <div class="modal-field"><div class="k">BOM Version</div><div class="v">${esc(c.bomVersion||'—')}</div></div>
+        </div>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-title">CRD Spec</div>
+        <div class="modal-fields">
+          <div class="modal-field"><div class="k">Item</div><div class="v">${esc(c.crdItem||'—')}</div></div>
+          <div class="modal-field"><div class="k">Group</div><div class="v">${esc(c.crdGroup||'—')}</div></div>
+          <div class="modal-field"><div class="k">Version</div><div class="v">${esc(c.crdVersion||'—')}</div></div>
+          <div class="modal-field"><div class="k">Notes</div><div class="v">${esc(c.crdNotes||'—')}</div></div>
+        </div>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-title">Match Analysis</div>
+        <div class="modal-fields">
+          <div class="modal-field"><div class="k">Location Score</div><div class="v">${c.locationScore}%</div></div>
+          <div class="modal-field"><div class="k">Version Score</div><div class="v" style="color:${vc}">${c.versionScore}%</div></div>
+          <div class="modal-field" style="grid-column:1/-1"><div class="k">Verdict</div><div class="v">${esc(c.statusDetail||'—')}</div></div>
+        </div>
+      </div>`;
+  } else if (c.type === 'BOM_ONLY') {
+    body = `<div class="modal-section">
+      <div class="modal-section-title">BOM-Only Item</div>
+      <div class="modal-fields">
+        <div class="modal-field"><div class="k">Location</div><div class="v">${esc(c.bomLocation||'—')}</div></div>
+        <div class="modal-field"><div class="k">Child Part Number</div><div class="v">${esc(c.bomChildPN||'—')}</div></div>
+        <div class="modal-field"><div class="k">Child Revision</div><div class="v">${esc(c.bomChildRev||'—')}</div></div>
+        <div class="modal-field"><div class="k">BOM Version</div><div class="v">${esc(c.bomVersion||'—')}</div></div>
+      </div>
+      <div class="modal-note">No matching CRD spec entry found for this BOM item.</div>
+    </div>`;
+  } else {
+    body = `<div class="modal-section">
+      <div class="modal-section-title">CRD-Only Item</div>
+      <div class="modal-fields">
+        <div class="modal-field"><div class="k">Item</div><div class="v">${esc(c.crdItem||'—')}</div></div>
+        <div class="modal-field"><div class="k">Group</div><div class="v">${esc(c.crdGroup||'—')}</div></div>
+        <div class="modal-field"><div class="k">Version</div><div class="v">${esc(c.crdVersion||'—')}</div></div>
+        <div class="modal-field"><div class="k">Notes</div><div class="v">${esc(c.crdNotes||'—')}</div></div>
+      </div>
+      <div class="modal-note">No matching BOM entry found for this CRD spec.</div>
+    </div>`;
+  }
+
+  document.getElementById('modalBody').innerHTML = body;
+  overlay.style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').style.display = 'none';
+}
+
+// ── Raw BOM table ────────────────────────────────────────────────────────────
+function buildRawTable(rows, crdRefRow) {
+  if (!rows || !rows.length) return '<p style="padding:1rem;color:var(--muted)">No data.</p>';
+  const cols  = Object.keys(rows[0]);
+  const crdKey = crdRefRow ? JSON.stringify(crdRefRow) : null;
+  return `<table>
+    <thead><tr>${cols.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(r => {
+      const isCrd = crdKey && JSON.stringify(r) === crdKey;
+      return `<tr class="${isCrd?'crd-ref-row':''}">
+        ${cols.map(c=>`<td class="mono">${esc(String(r[c]??''))}</td>`).join('')}
+        ${isCrd?`<td><span class="badge-warn">CRD REF</span></td>`:''}
+      </tr>`;
+    }).join('')}</tbody></table>`;
+}
+
+// ── CRD specs table ──────────────────────────────────────────────────────────
+function buildCrdTable(rows) {
+  if (!rows || !rows.length) return '<p style="padding:1rem;color:var(--muted)">No data.</p>';
+  const cols = Object.keys(rows[0]);
+  return `<table>
+    <thead><tr>${cols.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(r=>`<tr>
+      ${cols.map(c=>`<td class="${['Version','MPN'].includes(c)?'mono':''}">${esc(String(r[c]??''))}</td>`).join('')}
+    </tr>`).join('')}</tbody></table>`;
+}
+
+// ── CSV Export ───────────────────────────────────────────────────────────────
+function exportCSV() {
+  if (!lastData) return;
+  const header = ['Type','BOM Location','CRD Item','Child PN','Child Rev','BOM Version','CRD Version','Version Score','Status','Detail'];
+  const rows = lastData.comparisons.map(c => [
+    c.type, c.bomLocation||'', c.crdItem||'', c.bomChildPN||'', c.bomChildRev||'',
+    c.bomVersion||'', c.crdVersion||'', c.versionScore!=null?c.versionScore:'', c.status, c.statusDetail||''
+  ]);
+  const csv = [header,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type:'text/csv' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `bom-comparison-${lastData.partNumber||Date.now()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function scoreColor(score) {
+  if (score >= 90) return 'var(--pass-fg)';
+  if (score >= 70) return 'var(--warn-fg)';
+  return 'var(--fail-fg)';
+}
+</script>
+</body>
+</html>

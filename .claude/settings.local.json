@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(New-Item -ItemType Directory -Path \"c:\\\\Users\\\\YM2212001\\\\OneDrive - Wiwynn Corporation\\\\Documents\\\\GitHub\\\\AI_BOMchecker\\\\public\" -Force)",
+      "PowerShell(Get-Command node, npm -ErrorAction SilentlyContinue)"
+    ]
+  }
+}
