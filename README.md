@@ -26,17 +26,21 @@ A dark industrial Node.js web application for AI-powered BOM (Bill of Materials)
 ## Setup
 
 ```bash
-cd aura-t
-npm install
+npm install --prefix BackEnd
+npm install --prefix Frontend
 npm start
 ```
 
 Open http://localhost:3000 in your browser.
 
-For development with auto-reload:
+For development (backend with live API + Vite dev server with hot reload):
 ```bash
-npm install -g nodemon
 npm run dev
+```
+
+To build the frontend for production (served by the backend from `Frontend/dist`):
+```bash
+npm run build
 ```
 
 ---
@@ -78,12 +82,15 @@ Standard spreadsheet with column headers in row 1.
 ## Project Structure
 
 ```
-aura-t/
-├── server.js          # Express server + BOM analysis engine
-├── package.json
-├── public/
-│   ├── index.html     # Main UI
-│   ├── css/style.css  # Dark industrial theme
-│   └── js/app.js      # Frontend logic
-└── uploads/           # Temp upload directory (auto-created)
+AI-BOMChecker/
+├── package.json        # Root orchestrator (start/dev/build delegate to BackEnd & Frontend)
+├── BackEnd/
+│   ├── server.js       # Express server + BOM vs CRD comparison engine
+│   ├── DB.js           # MSSQL connection pool
+│   └── package.json
+└── Frontend/
+    ├── index.html
+    ├── vite.config.js
+    ├── src/            # React UI (components, panels, styles)
+    └── package.json
 ```
