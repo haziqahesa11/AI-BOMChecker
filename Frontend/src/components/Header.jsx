@@ -8,7 +8,7 @@ export default function Header() {
         <rect x="5" y="15" width="18" height="2" rx="1" fill="rgba(255,255,255,.2)" />
         <rect x="5" y="19" width="12" height="2" rx="1" fill="rgba(255,255,255,.1)" />
       </svg>
-      <h1>AURA-T</h1>
+      <h1>AI-BOM</h1>
       <span className="sub">BOM vs CRD</span>
       <span className="badge">Wiwynn</span>
     </header>

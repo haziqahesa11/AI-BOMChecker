@@ -114,6 +114,17 @@ header .badge {
 }
 .pn-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,.12); }
 .pn-input::placeholder { font-family: -apple-system, sans-serif; color: var(--muted); }
+.pn-select {
+  padding: .55rem .9rem;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  font-size: .95rem;
+  outline: none;
+  background: var(--surface2);
+  color: var(--text);
+  transition: border-color .15s, box-shadow .15s;
+}
+.pn-select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,.12); }
 .search-btn {
   padding: .55rem 1.4rem;
   background: var(--primary);
@@ -178,6 +189,31 @@ main {
 
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
+
+.page-tabs { padding: 0 2rem; background: var(--surface); }
+.page-tabs .tabs { margin-bottom: 0; }
+
+.mo-result {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+}
+.mo-result h3 { font-size: .9rem; color: var(--text); margin-bottom: .5rem; }
+.mo-result h3 + .mo-result-pre { margin-bottom: 1rem; }
+.mo-result-pre {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: .75rem;
+  font-family: 'Courier New', monospace;
+  font-size: .8rem;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 400px;
+  overflow: auto;
+}
 
 /* ── Overview: score + stats ── */
 .overview-grid {

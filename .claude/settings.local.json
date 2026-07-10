@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "PowerShell(New-Item -ItemType Directory -Path \"c:\\\\Users\\\\YM2212001\\\\OneDrive - Wiwynn Corporation\\\\Documents\\\\GitHub\\\\AI_BOMchecker\\\\public\" -Force)",
-      "PowerShell(Get-Command node, npm -ErrorAction SilentlyContinue)"
+      "PowerShell(Get-Command node, npm -ErrorAction SilentlyContinue)",
+      "PowerShell(pm2 logs backend --lines 50 --nostream)",
+      "PowerShell(Test-NetConnection -ComputerName 10.251.231.65 -Port 3389 -WarningAction SilentlyContinue)",
+      "PowerShell(Test-NetConnection -ComputerName 10.251.231.65 -Port 5985 -WarningAction SilentlyContinue)",
+      "PowerShell(Test-NetConnection -ComputerName 10.251.231.65 -Port 5986 -WarningAction SilentlyContinue)"
     ]
   }
 }

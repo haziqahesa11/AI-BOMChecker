@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const { sql, query } = require('./DB');
+const { fetchMoItem } = require('./services/moApiClient');
 
 const app = express();
 app.use(express.json());
@@ -108,6 +109,27 @@ app.post('/api/compare', async (req, res) => {
       comparisons
     });
 
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── API: MO lookup (Phase 1 — pnNumber is accepted but not yet used) ───────
+app.post('/api/mo-lookup', async (req, res) => {
+  const { moNumber, pnNumber } = req.body;
+  if (!moNumber?.trim()) {
+    return res.status(400).json({ error: 'MO Number is required.' });
+  }
+
+  try {
+    const { params, xml } = await fetchMoItem(moNumber.trim());
+    res.json({
+      moNumber: moNumber.trim(),
+      pnNumber: pnNumber || null,
+      requestParams: params,
+      rawResponse: xml
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -521,6 +543,17 @@ function matchAndCompare(bomRows, crdRows, pn = '', bmcPfmMap = new Map(), biosP
       if (vrGolden) { crdVer = vrGolden; crdVersionSource = 'DeviceCfg (VR)'; }
       const rev = (bomRow.ChildRevision || '').trim();
       if (rev && rev !== '*') bomVer = rev;
+    } else if (isRackTORSwitchSlot(loc)) {
+      // DATA_SW / BCK_SW — CRD golden reference is prefixed with the OS/family name
+      // (e.g. "SONiC.20250510.16"); BOM ChildRevision stores only the build number.
+      const v = extractRackSwitchOSVersion(crdRow.Version);
+      if (v) { crdVer = v; crdVersionSource = 'Version (OS build)'; }
+      const rev = (bomRow.ChildRevision || '').trim();
+      if (rev && rev !== '*') bomVer = rev;
+    } else if (isRackMgmtSwitchSlot(loc) || isRackManagerSlot(loc)) {
+      // MGMT_SW / RM — CRD Version is the golden reference as-is, no extraction needed.
+      const rev = (bomRow.ChildRevision || '').trim();
+      if (rev && rev !== '*') bomVer = rev;
     }
     // FRU is not handled here — findBestCRDMatch returns null for FRU (CRD has no FRU row),
     // so the dedicated FRU loop below owns the comparison entirely.
@@ -779,6 +812,46 @@ function findBestCRDMatch(bomRow, crdRows, usedIdx) {
   // FRU loop in matchAndCompare (fruMap ← DeviceCfg, PartNumber LIKE '%FRU').
   if (isFRUSlot(loc)) return null;
 
+  // ── Rack: TOR Switch OS (DATA_SW / BCK_SW) ─────────────────────────────────
+  // CRD row: Group ⊃ "Rack", Item ⊃ "TOR Switch".
+  // Both physical ToR switches (data + backup) share the one CRD entry → shared: true.
+  if (isRackTORSwitchSlot(loc)) {
+    for (let idx = 0; idx < crdRows.length; idx++) {
+      const group = (crdRows[idx].Group || '').trim();
+      const item  = (crdRows[idx].Item  || '').trim();
+      if (/rack/i.test(group) && /tor\s*switch/i.test(item)) {
+        return { row: crdRows[idx], index: idx, locationScore: 100, shared: true };
+      }
+    }
+    return null;
+  }
+
+  // ── Rack: Management switch (MGMT_SW / MGMT_SW_N) ──────────────────────────
+  // CRD row: Group ⊃ "Rack", Item ⊃ "Management switch".
+  if (isRackMgmtSwitchSlot(loc)) {
+    for (let idx = 0; idx < crdRows.length; idx++) {
+      const group = (crdRows[idx].Group || '').trim();
+      const item  = (crdRows[idx].Item  || '').trim();
+      if (/rack/i.test(group) && /management\s*switch/i.test(item)) {
+        return { row: crdRows[idx], index: idx, locationScore: 100, shared: true };
+      }
+    }
+    return null;
+  }
+
+  // ── Rack: Rack Manager (RM / RM_N) ──────────────────────────────────────────
+  // CRD row: Group ⊃ "Rack", Item ⊃ "Rack Manager".
+  if (isRackManagerSlot(loc)) {
+    for (let idx = 0; idx < crdRows.length; idx++) {
+      const group = (crdRows[idx].Group || '').trim();
+      const item  = (crdRows[idx].Item  || '').trim();
+      if (/rack/i.test(group) && /rack\s*manager/i.test(item)) {
+        return { row: crdRows[idx], index: idx, locationScore: 100, shared: true };
+      }
+    }
+    return null;
+  }
+
   // ── General: location-name similarity OR direct version match ──────────────
   // Firmware-family BOM locations all return above; only non-firmware locations reach here.
   // Firmware CRD rows are also excluded — they must never match via the general path
@@ -798,6 +871,7 @@ function findBestCRDMatch(bomRow, crdRows, usedIdx) {
   crdRows.forEach((crdRow, idx) => {
     if (usedIdx.has(idx)) return;
     if (isFirmwareCRDRow(crdRow)) return; // never match firmware CRD rows via location/version similarity
+    if (isRackCRDRow(crdRow)) return; // never match routed Rack CRD rows via location/version similarity
 
     const locScore = locationScore(bomRow.Location, crdRow.Item);
 
@@ -842,6 +916,16 @@ function isFirmwareCRDRow(crdRow) {
   if (/fru$/i.test(item))                                            return true; // FRU
   if (/vr$/i.test(item))                                             return true; // VR
   return false;
+}
+
+// Returns true for CRD rows that belong to a routed Rack family (TOR Switch, Management
+// switch, Rack Manager). These rows are handled exclusively by their dedicated paths in
+// findBestCRDMatch and must never be matched via the general location/version similarity path.
+function isRackCRDRow(crdRow) {
+  const group = (crdRow.Group || '').trim();
+  const item  = (crdRow.Item  || '').trim();
+  if (!/rack/i.test(group)) return false;
+  return /tor\s*switch/i.test(item) || /management\s*switch/i.test(item) || /rack\s*manager/i.test(item);
 }
 
 // ── BIOS special-case helpers ──────────────────────────────────────────────
@@ -922,6 +1006,22 @@ function isFRUSlot(loc) { return /^(?:mb\.)?fru$/i.test((loc || '').trim()); }
 
 // "VR" or "MB.VR" — voltage regulator firmware location (all models).
 function isVRSlot(loc) { return /^(?:mb\.)?vr$/i.test((loc || '').trim()); }
+
+// ── Rack-level location helpers ────────────────────────────────────────────
+// Rack CRD rows are grouped under Group ⊃ "Rack", identified purely by BOM Location —
+// no model names needed, same convention as the firmware slot helpers above.
+function isRackTORSwitchSlot(loc)  { return /^(DATA_SW|BCK_SW)$/i.test((loc || '').trim()); }
+function isRackMgmtSwitchSlot(loc) { return /^MGMT_SW(_\d+)?$/i.test((loc || '').trim()); }
+function isRackManagerSlot(loc)    { return /^RM(_\d+)?$/i.test((loc || '').trim()); }
+
+// TOR Switch OS golden reference is prefixed with the OS/family name in CRD Version
+// (e.g. "SONiC.20250510.16"); BOM ChildRevision stores only the build number ("20250510.16").
+// Strips a single leading alpha token + dot; returns the raw value unchanged if no such prefix.
+function extractRackSwitchOSVersion(version) {
+  const v = (version || '').trim();
+  const m = v.match(/^[A-Za-z]+\.(.+)$/);
+  return m ? m[1].trim() : v;
+}
 
 // For BMC #N.xxx / MB.BMC #N.xxx: rewrite ChildRevision format using the CRD version number.
 // Preserves the surrounding prefix/suffix; replaces only the version-bearing segment.
@@ -1143,8 +1243,32 @@ function normLocation(s) {
     .trim();
 }
 
+// True when a string is purely digits with only '.', '-', '_' as separators (no letters) —
+// the shape numeric byte-pair equivalence (below) is safe to apply to.
+function isPureNumericVersion(v) {
+  return /^[0-9]+(?:[.\-_][0-9]+)*$/.test((v || '').trim());
+}
+
+// Numeric byte-pair equivalence for purely-numeric version strings whose format (grouping,
+// zero-padding, separators) differs but whose underlying numeric value is the same.
+// Digits are read in pairs left-to-right (hardware version bytes are conventionally 2 digits
+// each), then trailing zero bytes are dropped so an extra zero-padded byte on one side doesn't
+// block the match.
+//   CPLD golden "030400" → bytes [3,4,0] → trailing zero dropped → [3,4]
+//   CPLD BOM    "0304"   → bytes [3,4]                            → [3,4]  → equal
+function normNumericBytes(v) {
+  const digits = (v || '').replace(/\D/g, '');
+  if (!digits) return null;
+  const bytes = [];
+  for (let i = 0; i < digits.length; i += 2) {
+    bytes.push(parseInt(digits.slice(i, i + 2).padEnd(2, '0'), 10));
+  }
+  while (bytes.length > 1 && bytes[bytes.length - 1] === 0) bytes.pop();
+  return bytes.join('.');
+}
+
 // Score how well a single BOM candidate matches the CRD golden reference (0-100).
-// Tries exact → BC-normalised → normalised-string → fuzzy, in that order.
+// Tries exact → BC-normalised → normalised-string → numeric byte-pair → fuzzy, in that order.
 function scoreBOMCandidate(candidate, crdVersion, bcCrd, crdNorm) {
   if (!candidate) return 0;
   const v = candidate.trim();
@@ -1165,6 +1289,13 @@ function scoreBOMCandidate(candidate, crdVersion, bcCrd, crdNorm) {
       if (normBCVersion(s) === bcCrd) return 100;
       if (normVer(s) === crdNorm) return 100;
     }
+  }
+
+  // Numeric byte-pair equivalence — catches formats like CPLD "0304" vs golden "030400"
+  // that the exact/BC/normVer checks above don't reduce to the same string.
+  if (isPureNumericVersion(v) && isPureNumericVersion(crdVersion) &&
+      normNumericBytes(v) === normNumericBytes(crdVersion)) {
+    return 100;
   }
 
   return Math.round(strSim(n, crdNorm) * 100);

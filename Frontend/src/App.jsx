@@ -5,8 +5,16 @@ import StateBox from './components/StateBox'
 import ResultsArea from './components/ResultsArea'
 import AnomalySidebar from './components/AnomalySidebar'
 import RowDetailModal from './components/RowDetailModal'
+import TabBar from './components/TabBar'
+import MoLookupPage from './components/MoLookupPage'
+
+const PAGES = [
+  { id: 'bom', label: 'BOM Compare' },
+  { id: 'mo',  label: 'MO Lookup' },
+]
 
 export default function App() {
+  const [activePage, setActivePage]   = useState('bom')
   const [activeTab, setActiveTab]     = useState('overview')
   const [data, setData]               = useState(null)
   const [loading, setLoading]         = useState(false)
@@ -44,33 +52,43 @@ export default function App() {
   return (
     <>
       <Header />
-      <SearchBar onSearch={runCompare} loading={loading} />
-
-      <div className="app-body">
-        <main>
-          {loading && <StateBox type="loading" pn={searchPn} />}
-          {!loading && error && <StateBox type="error" message={error} />}
-          {!loading && !error && !data && <StateBox type="empty" />}
-          {!loading && !error && data && (
-            <ResultsArea
-              data={data}
-              activeTab={activeTab}
-              onTabSwitch={setActiveTab}
-              onSelectItem={setSelectedItem}
-            />
-          )}
-        </main>
-
-        {hasSidebar && (
-          <AnomalySidebar
-            comparisons={data.comparisons}
-            onSelect={setSelectedItem}
-          />
-        )}
+      <div className="page-tabs">
+        <TabBar tabs={PAGES} activeTab={activePage} onSwitch={setActivePage} />
       </div>
 
-      {selectedItem && (
-        <RowDetailModal item={selectedItem} onClose={() => setSelectedItem(null)} />
+      {activePage === 'mo' && <MoLookupPage />}
+
+      {activePage === 'bom' && (
+        <>
+          <SearchBar onSearch={runCompare} loading={loading} />
+
+          <div className="app-body">
+            <main>
+              {loading && <StateBox type="loading" pn={searchPn} />}
+              {!loading && error && <StateBox type="error" message={error} />}
+              {!loading && !error && !data && <StateBox type="empty" />}
+              {!loading && !error && data && (
+                <ResultsArea
+                  data={data}
+                  activeTab={activeTab}
+                  onTabSwitch={setActiveTab}
+                  onSelectItem={setSelectedItem}
+                />
+              )}
+            </main>
+
+            {hasSidebar && (
+              <AnomalySidebar
+                comparisons={data.comparisons}
+                onSelect={setSelectedItem}
+              />
+            )}
+          </div>
+
+          {selectedItem && (
+            <RowDetailModal item={selectedItem} onClose={() => setSelectedItem(null)} />
+          )}
+        </>
       )}
     </>
   )
