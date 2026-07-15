@@ -7,5 +7,19 @@
     "start": "npm start --prefix BackEnd",
     "dev": "npm run dev --prefix BackEnd",
     "build": "npm run build --prefix Frontend"
-  }
+  },
+  "main": "index.js",
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/haziqahesa11/AI-BOMChecker.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/haziqahesa11/AI-BOMChecker/issues"
+  },
+  "homepage": "https://github.com/haziqahesa11/AI-BOMChecker#readme"
 }

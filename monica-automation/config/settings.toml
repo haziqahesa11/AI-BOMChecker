@@ -1,0 +1,39 @@
+[sql]
+# Real host/port/credentials live in the shared, gitignored ../../config/credentials/sql.env
+# (used by other apps in this repo too). This file names the connection, not its secrets.
+credentials_env = "../../config/credentials/sql.env"
+expected_instance_name = "WYHQ_SQL"   # from MonicaTPGenerator.xml SETTING/SQL@NAME
+# Server identifies itself as WYMY_DDNS6\SQLEXPRESS (matches the brief's "DDNS" machine
+# reference). Confirmed via sys.procedures introspection 2026-07-10: the brief's assumed
+# catalog "MSFT_SKU" does exist on this instance but does NOT contain the QVL/SysBom/
+# ReviewList procedures. Those live in the "BOM" database instead (same DB the existing
+# unrelated Node app in this repo already uses). Use "BOM", not "MSFT_SKU", for Phase 2+.
+expected_catalog = "BOM"
+
+[plm]
+primary_base_url = "https://plmkeymaker.wiwynn.com"
+primary_path = "/APIFP/part/get-part-classification"
+legacy_base_url = "http://wpqssvr.wistron.com.tw:8080"
+legacy_path = "/wpqs_plm/servlet/com.qpart.PartResult"
+credentials_env = "../../config/credentials/plm.env"   # does not exist yet; needs a real JWT from tool owner
+
+[cache]
+plm_cache_dir = "cache/plm"
+
+[http]
+timeout_seconds = 10
+max_retries = 1
+
+[automation_agent]
+# 2026-07-14: this round targets the dev laptop (WYMYOL54000395) only — the
+# agent and BackEnd/server.js both run here, so backend_base_url is just
+# localhost. tpg_exe_path points at the real, already-installed copy at
+# C:\Tools\MonicaTPGenerator\ (confirmed via Win32_Process — this is the
+# actual install in everyday use on this machine, NOT the repo-vendored copy
+# under @BOM-Based-APP, which was only useful for a one-off discovery test).
+# Porting to 10.251.231.65 (the RDP-only, no-SSH/WinRM production host per
+# PHASE0_FINDINGS.md) is a separate later rollout step, not covered here.
+backend_base_url = "http://localhost:3000"
+poll_interval_seconds = 3.0
+tpg_exe_path = 'C:\Tools\MonicaTPGenerator\MonicaTPGenerator.exe'
+credentials_env = "../../config/credentials/automation.env"

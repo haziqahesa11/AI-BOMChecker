@@ -1,0 +1,7 @@
+httpx>=0.28
+lxml>=6.1
+pytest>=9.1
+mypy>=2.2
+pywinauto>=0.6.9; sys_platform == "win32"
+pyodbc>=5.3
+Pillow>=12.0

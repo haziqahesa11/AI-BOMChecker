@@ -4,6 +4,8 @@ const fs = require('fs');
 const { sql, query } = require('./DB');
 const { fetchMoItem } = require('./services/moApiClient');
 
+require('dotenv').config({ path: path.join(__dirname, '..', 'config', 'credentials', 'automation.env') });
+
 const app = express();
 app.use(express.json());
 
@@ -115,25 +117,159 @@ app.post('/api/compare', async (req, res) => {
   }
 });
 
-// ── API: MO lookup (Phase 1 — pnNumber is accepted but not yet used) ───────
+// MO Category → QVL Model Reference / Location, per MonicaTPGenerator.xml.
+const MO_CATEGORY_TO_QVL = {
+  L10: { modelRef: 'C2012_L10', location: 'L10' },
+  L11: { modelRef: 'C2012_L11', location: 'L11' },
+};
+
+// ── API: MO lookup + QVL check ──────────────────────────────────────────────
 app.post('/api/mo-lookup', async (req, res) => {
-  const { moNumber, pnNumber } = req.body;
+  const { moNumber, moCategory, partNumber } = req.body;
   if (!moNumber?.trim()) {
     return res.status(400).json({ error: 'MO Number is required.' });
   }
 
   try {
     const { params, xml } = await fetchMoItem(moNumber.trim());
-    res.json({
+    const response = {
       moNumber: moNumber.trim(),
-      pnNumber: pnNumber || null,
+      moCategory: moCategory || null,
       requestParams: params,
       rawResponse: xml
-    });
+    };
+
+    if (partNumber?.trim()) {
+      const target = MO_CATEGORY_TO_QVL[moCategory];
+      if (!target) {
+        return res.status(400).json({ error: `Unknown MO Category "${moCategory}".` });
+      }
+
+      // Read-only: SP_QVL_Query_DESC(ModelRef, Location) → [{ModelRef, Location, PartNumber, Description}]
+      const qvlResult = await query(
+        'EXEC BOM.dbo.SP_QVL_Query_DESC @ModelRef = @modelRef, @Location = @location',
+        [
+          { name: 'modelRef', type: sql.NVarChar, value: target.modelRef },
+          { name: 'location', type: sql.NVarChar, value: target.location }
+        ]
+      );
+      const qvlRows = qvlResult.recordset;
+      const pn = partNumber.trim();
+      const match = qvlRows.find(r => (r.PartNumber || '').trim().toUpperCase() === pn.toUpperCase());
+
+      response.qvl = {
+        modelRef: target.modelRef,
+        location: target.location,
+        partNumber: pn,
+        inQVL: Boolean(match),
+        description: match ? match.Description : null,
+        qvlRowCount: qvlRows.length
+      };
+    }
+
+    res.json(response);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
   }
+});
+
+// ── Automation: QVL autofill agent ───────────────────────────────────────────
+//
+// MonicaTPGenerator.exe only runs interactively (no API of its own), so the
+// on-host agent (monica-automation/agent/qvl_autofill_agent.py) polls out for
+// work instead of being called directly. 2026-07-14: this round runs the
+// agent on the same laptop as this server — see monica-automation/config/
+// settings.toml and monica-automation/PHASE_QVL_DISCOVERY_FINDINGS.md.
+// Porting to a dedicated RDP-only host (no SSH/WinRM inbound path — see
+// monica-automation/PHASE0_FINDINGS.md) is a separate later rollout step.
+// This queue only ever asks the agent to *fill* fields (QVL tab, or the Test
+// BOM tab via its own Save/Load CSV round-trip) for a human to review — it
+// never submits (never clicks ADD/MODIFY or Submit), matching the write-gate
+// discipline in monica-automation/CONTEXT.md. Two job types share this one
+// queue and lifecycle (pending -> in_progress -> filled | error) since both
+// carry the identical trust boundary — a second queue would just duplicate
+// this file for no isolation benefit:
+//   'qvl_autofill'      — fills Model Reference/Location/PN/Description.
+//   'test_bom_autofill' — generates a CSV (monica/bom_builder.py) and Loads
+//                         it into the Test BOM tab's grid.
+const automationJobs = new Map(); // jobId -> job record
+let nextAutomationJobId = 1;
+
+function requireAgentToken(req, res, next) {
+  const expected = process.env.AUTOMATION_AGENT_TOKEN;
+  if (!expected) {
+    return res.status(503).json({ error: 'AUTOMATION_AGENT_TOKEN is not configured on the server.' });
+  }
+  if (req.get('Authorization') !== `Bearer ${expected}`) {
+    return res.status(401).json({ error: 'Unauthorized.' });
+  }
+  next();
+}
+
+// ── API: enqueue an automation job (called from the frontend) ──────────────
+app.post('/api/automation/jobs', (req, res) => {
+  const { jobType, moCategory, partNumber, description } = req.body;
+  const type = jobType || 'qvl_autofill'; // default keeps existing QVL callers unchanged
+  if (type !== 'qvl_autofill' && type !== 'test_bom_autofill') {
+    return res.status(400).json({ error: `Unknown jobType "${type}".` });
+  }
+
+  const target = MO_CATEGORY_TO_QVL[moCategory];
+  if (!target) {
+    return res.status(400).json({ error: `Unknown MO Category "${moCategory}".` });
+  }
+  if (!partNumber?.trim()) {
+    return res.status(400).json({ error: 'Part number is required.' });
+  }
+
+  const jobId = String(nextAutomationJobId++);
+  const job = {
+    jobId,
+    jobType: type,
+    modelRef: target.modelRef,
+    partNumber: partNumber.trim(),
+    status: 'pending', // pending -> in_progress -> filled | error
+    createdAt: new Date().toISOString(),
+    result: null,
+  };
+  if (type === 'qvl_autofill') {
+    // Test BOM jobs cover every location for the model/PN (resolved by
+    // bom_builder.py from live DB data) — 'location' and 'description' are
+    // QVL-tab-specific fields, not applicable here.
+    job.location = target.location;
+    job.description = description || null;
+  }
+  automationJobs.set(jobId, job);
+
+  res.json({ jobId });
+});
+
+// ── API: the on-host agent polls this for the next pending job ─────────────
+// Must be registered before the generic '/:id' route below, or Express would
+// match the literal segment "next" as an :id value instead.
+app.get('/api/automation/jobs/next', requireAgentToken, (req, res) => {
+  const job = [...automationJobs.values()].find(j => j.status === 'pending');
+  if (!job) return res.status(204).end();
+  job.status = 'in_progress';
+  res.json(job);
+});
+
+// ── API: frontend polls this for job status ─────────────────────────────────
+app.get('/api/automation/jobs/:id', (req, res) => {
+  const job = automationJobs.get(req.params.id);
+  if (!job) return res.status(404).json({ error: 'Unknown job id.' });
+  res.json(job);
+});
+
+// ── API: the on-host agent reports back the outcome of a job ───────────────
+app.post('/api/automation/jobs/:id/result', requireAgentToken, (req, res) => {
+  const job = automationJobs.get(req.params.id);
+  if (!job) return res.status(404).json({ error: 'Unknown job id.' });
+  const { status, detail } = req.body;
+  job.status = status === 'error' ? 'error' : 'filled';
+  job.result = detail || null;
+  res.json({ ok: true });
 });
 
 // ── Comparison logic ───────────────────────────────────────────────────────

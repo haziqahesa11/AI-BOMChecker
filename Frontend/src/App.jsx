@@ -49,6 +49,11 @@ export default function App() {
 
   const hasSidebar = !!(data && data.comparisons && data.comparisons.length > 0)
 
+  function proceedToCompare(pn) {
+    setActivePage('bom')
+    runCompare(pn)
+  }
+
   return (
     <>
       <Header />
@@ -56,7 +61,7 @@ export default function App() {
         <TabBar tabs={PAGES} activeTab={activePage} onSwitch={setActivePage} />
       </div>
 
-      {activePage === 'mo' && <MoLookupPage />}
+      {activePage === 'mo' && <MoLookupPage onProceedToCompare={proceedToCompare} />}
 
       {activePage === 'bom' && (
         <>
