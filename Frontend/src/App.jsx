@@ -5,16 +5,19 @@ import StateBox from './components/StateBox'
 import ResultsArea from './components/ResultsArea'
 import AnomalySidebar from './components/AnomalySidebar'
 import RowDetailModal from './components/RowDetailModal'
-import TabBar from './components/TabBar'
 import MoLookupPage from './components/MoLookupPage'
+import TpgCheckPage from './components/TpgCheckPage'
+import CrdTrackerPage from './components/CrdTrackerPage'
 
 const PAGES = [
-  { id: 'bom', label: 'BOM Compare' },
-  { id: 'mo',  label: 'MO Lookup' },
+  { id: 'bom',         label: 'BOM Compare' },
+  { id: 'mo',          label: 'MO Lookup' },
+  { id: 'tpg-check',   label: 'TPG Check' },
+  { id: 'crd-tracker', label: 'CRD Tracker' },
 ]
 
 export default function App() {
-  const [activePage, setActivePage]   = useState('bom')
+  const [activePage, setActivePage]   = useState('home')
   const [activeTab, setActiveTab]     = useState('overview')
   const [data, setData]               = useState(null)
   const [loading, setLoading]         = useState(false)
@@ -56,12 +59,13 @@ export default function App() {
 
   return (
     <>
-      <Header />
-      <div className="page-tabs">
-        <TabBar tabs={PAGES} activeTab={activePage} onSwitch={setActivePage} />
-      </div>
+      <Header pages={PAGES} activePage={activePage} onNavigate={setActivePage} />
 
       {activePage === 'mo' && <MoLookupPage onProceedToCompare={proceedToCompare} />}
+
+      {activePage === 'tpg-check' && <TpgCheckPage />}
+
+      {activePage === 'crd-tracker' && <CrdTrackerPage />}
 
       {activePage === 'bom' && (
         <>

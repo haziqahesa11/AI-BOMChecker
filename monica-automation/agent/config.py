@@ -34,9 +34,15 @@ def load_agent_config(settings_path: Path | None = None) -> AgentConfig:
             "(must match the value BackEnd/server.js was started with), and retry."
         )
 
+    # tpg_exe_path is stored relative to _PROJECT_DIR (monica-automation/) so
+    # the same settings.toml works for any engineer's checkout regardless of
+    # their Windows username/OneDrive folder — resolve it to an absolute path
+    # here rather than baking one into the repo.
+    tpg_exe_path = str((_PROJECT_DIR / agent["tpg_exe_path"]).resolve())
+
     return AgentConfig(
         backend_base_url=agent["backend_base_url"].rstrip("/"),
         poll_interval_seconds=float(agent["poll_interval_seconds"]),
-        tpg_exe_path=agent["tpg_exe_path"],
+        tpg_exe_path=tpg_exe_path,
         agent_token=token,
     )

@@ -1,6 +1,11 @@
 import { useState } from 'react'
 
-export default function SearchBar({ onSearch, loading }) {
+export default function SearchBar({
+  onSearch,
+  loading,
+  buttonLabel = 'Search & Compare',
+  hint = 'Enter the BOM Parent Part Number to verify against CRD specifications',
+}) {
   const [pn, setPn] = useState('')
 
   function handleSearch() {
@@ -27,9 +32,9 @@ export default function SearchBar({ onSearch, loading }) {
           <circle cx="11" cy="11" r="8" />
           <path d="m21 21-4.35-4.35" />
         </svg>
-        Search &amp; Compare
+        {buttonLabel}
       </button>
-      <span className="hint">Enter the BOM Parent Part Number to verify against CRD specifications</span>
+      <span className="hint">{hint}</span>
     </div>
   )
 }

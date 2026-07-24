@@ -6,9 +6,13 @@ each job by jobType — 'qvl_autofill' fills MonicaTPGenerator.exe's QVL tab
 always reviews and submits, matching the write-gate discipline in
 ../CONTEXT.md.
 
-2026-07-14: this round runs on the dev laptop (WYMYOL54000395) rather than
-10.251.231.65 — see ../config/settings.toml and ../PHASE_QVL_DISCOVERY_FINDINGS.md.
-Porting to that RDP-only host is a separate later rollout step.
+Runs entirely on a normal engineering laptop, alongside BackEnd/server.js and
+TPG itself — see ../../tools/monica-access/README.md for why this works
+without RDP/a remote host (TPG's own MonicaTPGenerator.xml now points its SQL
+connection directly at 10.251.231.65, which is reachable from an ordinary
+corporate laptop). If TPG isn't already open when a job arrives,
+tpg_process.connect_or_launch() launches it from the repo-vendored copy
+(../../@BOM-Based-APP/New MTPG/) — no manual pre-step required.
 
 The QVL pywinauto selectors are confirmed against the real running app — see
 ../PHASE_QVL_DISCOVERY_FINDINGS.md for the discovery session that produced
@@ -25,7 +29,6 @@ import time
 from pathlib import Path
 
 import httpx
-from pywinauto import Application
 from pywinauto.findwindows import ElementNotFoundError
 
 from monica.logging_setup import configure_logging
@@ -33,6 +36,7 @@ from monica.logging_setup import configure_logging
 from .config import AgentConfig, load_agent_config
 from .job_client import Job, fetch_next_job, report_result
 from .test_bom_autofill import fill_test_bom_tab
+from .tpg_process import connect_or_launch
 
 logger = logging.getLogger("agent.qvl_autofill")
 
@@ -47,30 +51,40 @@ def fill_qvl_tab(config: AgentConfig, job: Job) -> None:
     "L11" is a legitimate whole-rack Location value alongside per-bay codes
     like "B01").
     """
-    # connect(path=...) is safe even with multiple running instances of the
-    # same exe (confirmed empirically 2026-07-14): pywinauto's process_from_module
-    # reverses its process list and attaches to the MOST RECENTLY LAUNCHED
-    # matching instance, not an arbitrary/random one. Still, if a TE has an
-    # older TPG window open and someone launches a newer one, this will
-    # attach to the newer window, not necessarily the one currently in
-    # focus/visible — the fill-only, never-submit design means a wrong-window
-    # fill can't corrupt data, but it can confuse a human watching the wrong
-    # window. Not hardened further here — out of scope for this round.
-    app = Application(backend="win32").connect(path=config.tpg_exe_path, timeout=5)
+    # connect_or_launch handles both cases: attach if TPG is already open, or
+    # launch it fresh from the vendored repo copy if not — see tpg_process.py.
+    # Its own connect(path=...) call is safe even with multiple running
+    # instances of the same exe (confirmed empirically 2026-07-14):
+    # pywinauto's process_from_module reverses its process list and attaches
+    # to the MOST RECENTLY LAUNCHED matching instance, not an arbitrary/random
+    # one. Still, if a TE has an older TPG window open and someone launches a
+    # newer one, this will attach to the newer window, not necessarily the
+    # one currently in focus/visible — the fill-only, never-submit design
+    # means a wrong-window fill can't corrupt data, but it can confuse a
+    # human watching the wrong window. Not hardened further here — out of
+    # scope for this round.
+    app = connect_or_launch(config)
     window = app.window(title_re=".*Monica.*Test.*Program.*Generator.*")
-    window.set_focus()
 
     top_tab = window.child_window(auto_id="tabCtl", control_type="System.Windows.Forms.TabControl")
     top_tab.select("QVL")
 
+    # .wait("exists enabled") guards against a freshly-launched window whose
+    # controls aren't interactive yet (TPG is still opening its SQL
+    # connection) — a no-op if TPG was already open and warmed up, since the
+    # condition is already true. test_bom_autofill.py's Test BOM path already
+    # needed this same guard; the QVL path previously assumed an
+    # already-open, already-warm instance and had no wait at all.
     model_ref_combo = window.child_window(
         auto_id="cmBoxQvlModelReferenceList", control_type="System.Windows.Forms.ComboBox"
     )
+    model_ref_combo.wait("exists enabled", timeout=30)
     model_ref_combo.select(job.model_ref)
 
     location_combo = window.child_window(
         auto_id="cmBoxQvlLocation", control_type="System.Windows.Forms.ComboBox"
     )
+    location_combo.wait("exists enabled", timeout=15)
     location_combo.select(job.location)
 
     pn_edit = window.child_window(auto_id="txtBoxQvlPN", control_type="System.Windows.Forms.TextBox")

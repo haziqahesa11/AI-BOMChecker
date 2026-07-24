@@ -1,0 +1,4 @@
+python tools/deploy_ai_bom_online.py                  # full deploy: install + build + restart
+python tools/deploy_ai_bom_online.py --skip-install    # faster, skip npm install if deps unchanged
+python tools/deploy_ai_bom_online.py --with-creds      # also re-sync sql.env/automation.env
+python tools/deploy_ai_bom_online.py --dry-run         # preview only, touches nothing

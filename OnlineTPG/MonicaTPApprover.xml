@@ -1,0 +1,6 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<CONFIGURATION>
+  <SETTING>
+    <SQL IP="10.251.231.65"   NAME="WYHQ_SQL"  LOCATION="WYHQ"     IN="SQLEXPRESS" />
+  </SETTING>
+</CONFIGURATION>

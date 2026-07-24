@@ -25,15 +25,21 @@ timeout_seconds = 10
 max_retries = 1
 
 [automation_agent]
-# 2026-07-14: this round targets the dev laptop (WYMYOL54000395) only — the
-# agent and BackEnd/server.js both run here, so backend_base_url is just
-# localhost. tpg_exe_path points at the real, already-installed copy at
-# C:\Tools\MonicaTPGenerator\ (confirmed via Win32_Process — this is the
-# actual install in everyday use on this machine, NOT the repo-vendored copy
-# under @BOM-Based-APP, which was only useful for a one-off discovery test).
-# Porting to 10.251.231.65 (the RDP-only, no-SSH/WinRM production host per
-# PHASE0_FINDINGS.md) is a separate later rollout step, not covered here.
+# The agent runs locally on the same laptop as BackEnd/server.js and TPG
+# itself — see tools/monica-access/README.md for why this works directly
+# (no RDP/remote host needed): TPG's own MonicaTPGenerator.xml now points
+# its SQL connection at 10.251.231.65 directly, which is reachable from an
+# ordinary corporate laptop.
+#
+# tpg_exe_path is relative to this project dir (monica-automation/) and
+# resolved to an absolute path in agent/config.py's load_agent_config() —
+# deliberately NOT a hardcoded absolute path, so any engineer gets a working
+# path regardless of their Windows username/OneDrive folder location. It
+# points at the repo-vendored copy under @BOM-Based-APP, which is the real
+# copy in everyday use (confirmed via Win32_Process 2026-07-15) — the
+# earlier C:\Tools\MonicaTPGenerator\ reference was stale and no longer
+# exists on this laptop.
 backend_base_url = "http://localhost:3000"
 poll_interval_seconds = 3.0
-tpg_exe_path = 'C:\Tools\MonicaTPGenerator\MonicaTPGenerator.exe'
+tpg_exe_path = "../@BOM-Based-APP/New MTPG/MonicaTPGenerator.exe"
 credentials_env = "../../config/credentials/automation.env"

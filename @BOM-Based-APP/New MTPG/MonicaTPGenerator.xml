@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <CONFIGURATION>
   <SETTING>
-    <SQL IP="MonicaMTE.wiwynn.com"                        NAME="WYHQ_SQL" LOCATION="WYHQ"    IN="SQLEXPRESS" />
+    <SQL IP="10.251.231.65"                               NAME="WYHQ_SQL" LOCATION="WYHQ"    IN="SQLEXPRESS" />
   </SETTING>
   <MODEL>
     <C1042_L10 LEVEL="L10">

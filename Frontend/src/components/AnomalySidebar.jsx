@@ -21,8 +21,8 @@ export default function AnomalySidebar({ comparisons, onSelect }) {
             const typeColor = isMismatch
               ? 'var(--fail-fg)'
               : isBomOnly
-              ? '#60a5fa'
-              : '#a78bfa'
+              ? 'var(--info-fg)'
+              : 'var(--purple-fg)'
 
             const typeLabel = isMismatch ? 'Mismatch' : isBomOnly ? 'BOM Only' : 'CRD Only'
 

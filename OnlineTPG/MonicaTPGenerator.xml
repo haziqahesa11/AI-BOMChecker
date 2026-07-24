@@ -1,0 +1,595 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<CONFIGURATION>
+  <SETTING>
+    <SQL IP="10.251.231.65"                               NAME="WYHQ_SQL" LOCATION="WYHQ"    IN="SQLEXPRESS" />
+  </SETTING>
+  <MODEL>
+    <C1042_L10 LEVEL="L10">
+      <LOCATION  NAME="BIOS"                   TYPE="FW"  REMARK="FIRMWARE"      />
+      <LOCATION  NAME="BMC"                    TYPE="FW"  REMARK="FIRMWARE"      />
+      <LOCATION  NAME="CPLD"                   TYPE="FW"  REMARK="FIRMWARE"      />
+      <LOCATION  NAME="FRU"                    TYPE="FW"  REMARK="FIRMWARE"      />
+      <LOCATION  NAME="VR_CPU_DDR"             TYPE="FW"  REMARK="FIRMWARE"      />
+      <LOCATION  NAME="CPU0"                   TYPE="HW"  REMARK="CPU"           />
+      <LOCATION  NAME="CPU1"                   TYPE="HW"  REMARK="CPU"           />
+      <LOCATION  NAME="DIMM_A1"                TYPE="HW"  REMARK="DIMM"          />
+      <LOCATION  NAME="DIMM_A2"                TYPE="HW"  REMARK="DIMM"          />
+      <LOCATION  NAME="DIMM_B1"                TYPE="HW"  REMARK="DIMM"          />
+      <LOCATION  NAME="DIMM_B2"                TYPE="HW"  REMARK="DIMM"          />
+      <LOCATION  NAME="DIMM_C1"                TYPE="HW"  REMARK="DIMM"          />
+      <LOCATION  NAME="DIMM_C2"                TYPE="HW"  REMARK="DIMM"          />
+      <LOCATION  NAME="DIMM_D1"                TYPE="HW"  REMARK="DIMM"          />
+      <LOCATION  NAME="DIMM_D2"                TYPE="HW"  REMARK="DIMM"          />
+      <LOCATION  NAME="DIMM_E1"                TYPE="HW"  REMARK="DIMM"          />
+      <LOCATION  NAME="DIMM_E2"                TYPE="HW"  REMARK="DIMM"          />
+      <LOCATION  NAME="DIMM_F1"                TYPE="HW"  REMARK="DIMM"          />
+      <LOCATION  NAME="DIMM_F2"                TYPE="HW"  REMARK="DIMM"          />
+      <LOCATION  NAME="DIMM_G1"                TYPE="HW"  REMARK="DIMM"          />
+      <LOCATION  NAME="DIMM_G2"                TYPE="HW"  REMARK="DIMM"          />
+      <LOCATION  NAME="DIMM_H1"                TYPE="HW"  REMARK="DIMM"          />
+      <LOCATION  NAME="DIMM_H2"                TYPE="HW"  REMARK="DIMM"          />
+      <LOCATION  NAME="FPGA1"                  TYPE="HW"  REMARK="DAUGHTER CARD" />
+      <LOCATION  NAME="FrontPanel"             TYPE="HW"  REMARK="LED CABLE"     />
+      <LOCATION  NAME="FullWide PDB"           TYPE="HW"  REMARK="L10 PDB"       />
+      <LOCATION  NAME="MB"                     TYPE="HW"  REMARK="MB"            />
+      <LOCATION  NAME="MEZCN1"                 TYPE="HW"  REMARK="NIC"           />
+      <LOCATION  NAME="PCIe Slot #1"           TYPE="HW"  REMARK="DAUGHTER CARD" />
+      <LOCATION  NAME="PCIe Slot #1.R1.PCIEM1" TYPE="HW"  REMARK="M.2 SSD"       />
+      <LOCATION  NAME="PCIe Slot #1.R1.PCIEM2" TYPE="HW"  REMARK="M.2 SSD"       />
+      <LOCATION  NAME="PCIe Slot #2"           TYPE="HW"  REMARK="DAUGHTER CARD" />
+      <LOCATION  NAME="PCIe Slot #2.R1.PCIEM1" TYPE="HW"  REMARK="M.2 SSD"       />
+      <LOCATION  NAME="PCIe Slot #2.R1.PCIEM2" TYPE="HW"  REMARK="M.2 SSD"       />
+      <LOCATION  NAME="PCIe Slot #3"           TYPE="HW"  REMARK="DAUGHTER CARD" />
+      <LOCATION  NAME="PCIe Slot #3.R1.PCIEM1" TYPE="HW"  REMARK="M.2 SSD"       />
+      <LOCATION  NAME="PCIe Slot #3.R1.PCIEM2" TYPE="HW"  REMARK="M.2 SSD"       />
+      <LOCATION  NAME="PCIe Slot #4"           TYPE="HW"  REMARK="DAUGHTER CARD" />
+      <LOCATION  NAME="PCIe Slot #4.R1.PCIEM1" TYPE="HW"  REMARK="M.2 SSD"       />
+      <LOCATION  NAME="PCIe Slot #4.R1.PCIEM2" TYPE="HW"  REMARK="M.2 SSD"       />
+      <LOCATION  NAME="SATA 0"                 TYPE="HW"  REMARK="HDD/SSD"       />
+      <LOCATION  NAME="SATA 1"                 TYPE="HW"  REMARK="HDD/SSD"       />
+      <LOCATION  NAME="SATA 2"                 TYPE="HW"  REMARK="HDD/SSD"       />
+      <LOCATION  NAME="SATA 3"                 TYPE="HW"  REMARK="HDD/SSD"       />
+      <LOCATION  NAME="SATA 4"                 TYPE="HW"  REMARK="HDD/SSD"       />
+      <LOCATION  NAME="SATA 5"                 TYPE="HW"  REMARK="HDD/SSD"       />
+      <LOCATION  NAME="sSATA 0"                TYPE="HW"  REMARK="HDD/SSD"       />
+      <LOCATION  NAME="sSATA 1"                TYPE="HW"  REMARK="HDD/SSD"       />
+      <LOCATION  NAME="sSATA 2"                TYPE="HW"  REMARK="HDD/SSD"       />
+      <LOCATION  NAME="sSATA 3"                TYPE="HW"  REMARK="HDD/SSD"       />
+      <LOCATION  NAME="TPM1"                   TYPE="HW"  REMARK="HDD/SSD"       />
+      <LOCATION  NAME="ASSETTAG"               TYPE="LBL" REMARK="HDD/SSD"       />
+      <LOCATION  NAME="CRD"                    TYPE="DOC" REMARK="CRD FILE"      />
+    </C1042_L10>
+
+    <C2012_L6 LEVEL="L6">
+      <LOCATION  NAME="BIOS #0"                TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="BMC #0"                 TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="CPLD"                   TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="FRU"                    TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="VR"                     TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="CPU0"                   TYPE="HW"  REMARK="CPU"                 />
+      <LOCATION  NAME="CPU1"                   TYPE="HW"  REMARK="CPU"                 />
+      <LOCATION  NAME="DIMM_A1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_G1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="FAN_1U"                 TYPE="HW"  REMARK="FAN"                 />
+      <LOCATION  NAME="M.2 #1"                 TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="M.2 #4"                 TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="MB"                     TYPE="HW"  REMARK="MB"                  />
+      <LOCATION  NAME="PCIe Slot #3"           TYPE="HW"  REMARK="RISER CARD"          />
+      <LOCATION  NAME="PCIe Slot #3.R1.CN1"    TYPE="HW"  REMARK="DAUGHTER CARD"       />
+      <LOCATION  NAME="PSU1"                   TYPE="HW"  REMARK="PSU"                 />
+      <LOCATION  NAME="TPM"                    TYPE="HW"  REMARK="TPM"                 />
+      <LOCATION  NAME="USB2"                   TYPE="HW"  REMARK="EXTERNAL USB"        />
+      <LOCATION  NAME="USB3"                   TYPE="HW"  REMARK="EXTERNAL USB"        />
+      <LOCATION  NAME="CRD"                    TYPE="DOC" REMARK="CRD FILE"            />
+    </C2012_L6>
+
+    <C2012_L10 LEVEL="L10">
+      <LOCATION  NAME="BIOS #0"                TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="BIOS #1"                TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="BMC #0"                 TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="BMC #1"                 TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="CPLD"                   TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="FRU"                    TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="VR"                     TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="CPU0"                   TYPE="HW"  REMARK="CPU"                 />
+      <LOCATION  NAME="CPU1"                   TYPE="HW"  REMARK="CPU"                 />
+      <LOCATION  NAME="DIMM_A1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_A2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_B1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_B2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_C1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_C2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_D1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_D2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_E1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_E2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_F1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_F2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_G1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_G2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_H1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_H2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_J1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_J2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_K1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_K2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_L1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_L2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_M1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_M2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="FAN_1U"                 TYPE="HW"  REMARK="FAN"                 />
+      <LOCATION  NAME="FAN_2U"                 TYPE="HW"  REMARK="FAN"                 />
+      <LOCATION  NAME="M.2 #1"                 TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="M.2 #2"                 TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="M.2 #3"                 TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="M.2 #4"                 TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="MB"                     TYPE="HW"  REMARK="MB"                  />
+      <LOCATION  NAME="NCSI"                   TYPE="HW"  REMARK="NCSI CARD"           />
+      <LOCATION  NAME="OCULINK #1"             TYPE="HW"  REMARK="OCULINK"             />
+      <LOCATION  NAME="PCIe Slot #1"           TYPE="HW"  REMARK="RISER CARD"          />
+      <LOCATION  NAME="PCIe Slot #1.R1.CN1"    TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="PCIe Slot #1.R1.CN2"    TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="PCIe Slot #2"           TYPE="HW"  REMARK="RISER CARD"          />
+      <LOCATION  NAME="PCIe Slot #2.R1.CN1"    TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="PCIe Slot #2.R1.CN2"    TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="PCIe Slot #3"           TYPE="HW"  REMARK="RISER CARD"          />
+      <LOCATION  NAME="PCIe Slot #3.R1.CN1"    TYPE="HW"  REMARK="DAUGHTER CARD"       />
+      <LOCATION  NAME="PCIe Slot #4"           TYPE="HW"  REMARK="RISER CARD"          />
+      <LOCATION  NAME="PCIe Slot #4.R1.CN1"    TYPE="HW"  REMARK="DAUGHTER CARD"       />
+      <LOCATION  NAME="PCIe Slot #5"           TYPE="HW"  REMARK="RISER CARD"          />
+      <LOCATION  NAME="PCIe Slot #5.R1.CN1"    TYPE="HW"  REMARK="DAUGHTER CARD"       />
+      <LOCATION  NAME="PSU1"                   TYPE="HW"  REMARK="PSU"                 />
+      <LOCATION  NAME="PSU2"                   TYPE="HW"  REMARK="PSU"                 />
+      <LOCATION  NAME="SATA0"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA1"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA2"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA3"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA4"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA5"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA6"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA7"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA8"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA9"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA10"                 TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA11"                 TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="TPM"                    TYPE="HW"  REMARK="TPM"                 />
+      <LOCATION  NAME="USB2"                   TYPE="HW"  REMARK="EXTERNAL USB"        />
+      <LOCATION  NAME="USB3"                   TYPE="HW"  REMARK="EXTERNAL USB"        />
+      <LOCATION  NAME="ASSETTAG"               TYPE="LBL" REMARK="L10 MSFT ASSET TAG"  />
+      <LOCATION  NAME="CRD"                    TYPE="DOC" REMARK="CRD FILE"            />
+    </C2012_L10>
+
+    <C202A_L10 LEVEL="L10">
+      <LOCATION  NAME="BIOS #0"                TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="BIOS #1"                TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="BMC #0"                 TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="BMC #1"                 TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="CPLD"                   TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="FRU"                    TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="VR"                     TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="CPU0"                   TYPE="HW"  REMARK="CPU"                 />
+      <LOCATION  NAME="CPU1"                   TYPE="HW"  REMARK="CPU"                 />
+      <LOCATION  NAME="DIMM_A1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_A2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_B1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_B2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_C1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_C2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_D1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_D2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_E1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_E2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_F1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_F2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_G1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_G2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_H1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_H2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_I1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_I2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_J1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_J2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_K1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_K2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_L1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_L2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_M1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_M2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_N1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_N2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_O1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_O2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_P1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_P2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="FAN_1U"                 TYPE="HW"  REMARK="FAN"                 />
+      <LOCATION  NAME="FAN_2U"                 TYPE="HW"  REMARK="FAN"                 />
+      <LOCATION  NAME="M.2 #1"                 TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="M.2 #2"                 TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="M.2 #3"                 TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="M.2 #4"                 TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="MB"                     TYPE="HW"  REMARK="MB"                  />
+      <LOCATION  NAME="NCSI"                   TYPE="HW"  REMARK="NCSI CARD"           />
+      <LOCATION  NAME="OCULINK"                TYPE="HW"  REMARK="OCULINK"             />
+      <LOCATION  NAME="PCIe Slot #1"           TYPE="HW"  REMARK="RISER CARD"          />
+      <LOCATION  NAME="PCIe Slot #1.R1.CN1"    TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="PCIe Slot #1.R1.CN2"    TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="PCIe Slot #2"           TYPE="HW"  REMARK="RISER CARD"          />
+      <LOCATION  NAME="PCIe Slot #2.R1.CN1"    TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="PCIe Slot #2.R1.CN2"    TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="PCIe Slot #3"           TYPE="HW"  REMARK="RISER CARD"          />
+      <LOCATION  NAME="PCIe Slot #3.R1.CN1"    TYPE="HW"  REMARK="DAUGHTER CARD"       />
+      <LOCATION  NAME="PCIe Slot #4"           TYPE="HW"  REMARK="RISER CARD"          />
+      <LOCATION  NAME="PCIe Slot #4.R1.CN1"    TYPE="HW"  REMARK="DAUGHTER CARD"       />
+      <LOCATION  NAME="PCIe Slot #5"           TYPE="HW"  REMARK="RISER CARD"          />
+      <LOCATION  NAME="PCIe Slot #5.R1.CN1"    TYPE="HW"  REMARK="DAUGHTER CARD"       />
+      <LOCATION  NAME="PSU1"                   TYPE="HW"  REMARK="PSU"                 />
+      <LOCATION  NAME="PSU2"                   TYPE="HW"  REMARK="PSU"                 />
+      <LOCATION  NAME="SATA0"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA1"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA2"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA3"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA4"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA5"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA6"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA7"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA8"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA9"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA10"                 TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA11"                 TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="TPM"                    TYPE="HW"  REMARK="TPM"                 />
+      <LOCATION  NAME="USB1"                   TYPE="HW"  REMARK="EXTERNAL USB"        />
+      <LOCATION  NAME="USB2"                   TYPE="HW"  REMARK="EXTERNAL USB"        />
+      <LOCATION  NAME="USB4"                   TYPE="HW"  REMARK="INTERNAL USB"        />
+      <LOCATION  NAME="ASSETTAG"               TYPE="LBL" REMARK="L10 MSFT ASSET TAG"  />
+      <LOCATION  NAME="CRD"                    TYPE="DOC" REMARK="CRD FILE"            />
+    </C202A_L10>
+
+    <C2032_L10 LEVEL="L10">
+      <LOCATION  NAME="BIOS #0"                TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="BIOS #1"                TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="BMC #0"                 TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="BMC #1"                 TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="CPLD"                   TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="FRU"                    TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="VR"                     TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="CPU0"                   TYPE="HW"  REMARK="CPU"                 />
+      <LOCATION  NAME="CPU1"                   TYPE="HW"  REMARK="CPU"                 />
+      <LOCATION  NAME="DIMM_A1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_A2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_B1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_B2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_C1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_C2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_D1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_D2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_E1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_E2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_F1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_F2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_G1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_G2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_H1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_H2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_J1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_J2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_K1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_K2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_L1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_L2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_M1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_M2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="FAN_1U"                 TYPE="HW"  REMARK="FAN"                 />
+      <LOCATION  NAME="FAN_2U"                 TYPE="HW"  REMARK="FAN"                 />
+      <LOCATION  NAME="M.2 #1"                 TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="M.2 #2"                 TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="M.2 #3"                 TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="M.2 #4"                 TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="MB"                     TYPE="HW"  REMARK="MB"                  />
+      <LOCATION  NAME="NCSI"                   TYPE="HW"  REMARK="NCSI CARD"           />
+      <LOCATION  NAME="OCULINK #1"             TYPE="HW"  REMARK="OCULINK"             />
+      <LOCATION  NAME="PCIe MEZZANINE"         TYPE="HW"  REMARK="DAUGHTER CARD"       />
+      <LOCATION  NAME="PCIe Slot #1"           TYPE="HW"  REMARK="RISER CARD"          />
+      <LOCATION  NAME="PCIe Slot #1.R1.CN1"    TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="PCIe Slot #1.R1.CN2"    TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="PCIe Slot #2"           TYPE="HW"  REMARK="RISER CARD"          />
+      <LOCATION  NAME="PCIe Slot #2.R1.CN1"    TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="PCIe Slot #2.R1.CN2"    TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="PCIe Slot #3"           TYPE="HW"  REMARK="RISER CARD"          />
+      <LOCATION  NAME="PCIe Slot #3.R1.CN1"    TYPE="HW"  REMARK="DAUGHTER CARD"       />
+      <LOCATION  NAME="PCIe Slot #4"           TYPE="HW"  REMARK="RISER CARD"          />
+      <LOCATION  NAME="PCIe Slot #4.R1.CN1"    TYPE="HW"  REMARK="DAUGHTER CARD"       />
+      <LOCATION  NAME="PCIe Slot #5"           TYPE="HW"  REMARK="RISER CARD"          />
+      <LOCATION  NAME="PCIe Slot #5.R1.CN1"    TYPE="HW"  REMARK="DAUGHTER CARD"       />
+      <LOCATION  NAME="PSU1"                   TYPE="HW"  REMARK="PSU"                 />
+      <LOCATION  NAME="PSU2"                   TYPE="HW"  REMARK="PSU"                 />
+      <LOCATION  NAME="SATA0"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA1"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA2"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA3"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA4"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA5"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA6"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA7"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA8"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA9"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA10"                 TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA11"                 TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="TPM"                    TYPE="HW"  REMARK="TPM"                 />
+      <LOCATION  NAME="CERBERUS"               TYPE="HW"  REMARK="CERBERUS MODULE"     />
+      <LOCATION  NAME="USB2"                   TYPE="HW"  REMARK="EXTERNAL USB"        />
+      <LOCATION  NAME="USB3"                   TYPE="HW"  REMARK="EXTERNAL USB"        />
+      <LOCATION  NAME="USB4"                   TYPE="HW"  REMARK="INTERNAL USB"        />
+      <LOCATION  NAME="ASSETTAG"               TYPE="LBL" REMARK="L10 MSFT ASSET TAG"  />
+      <LOCATION  NAME="CRD"                    TYPE="DOC" REMARK="CRD FILE"            />
+    </C2032_L10>
+
+    <C206A_L10 LEVEL="L10">
+      <LOCATION  NAME="BIOS #0"                TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="BIOS #1"                TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="BMC #0"                 TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="BMC #1"                 TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="CPLD"                   TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="FRU"                    TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="VR"                     TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="CPU0"                   TYPE="HW"  REMARK="CPU"                 />
+      <LOCATION  NAME="CPU1"                   TYPE="HW"  REMARK="CPU"                 />
+      <LOCATION  NAME="DIMM_A1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_A2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_B1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_B2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_C1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_C2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_D1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_D2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_E1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_E2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_F1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_F2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_G1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_G2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_H1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_H2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_I1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_I2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_J1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_J2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_K1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_K2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_L1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_L2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_M1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_M2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_N1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_N2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_O1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_O2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_P1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_P2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="FAN_1U"                 TYPE="HW"  REMARK="FAN"                 />
+      <LOCATION  NAME="FAN_2U"                 TYPE="HW"  REMARK="FAN"                 />
+      <LOCATION  NAME="M.2 #1"                 TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="M.2 #2"                 TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="M.2 #3"                 TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="M.2 #4"                 TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="MB"                     TYPE="HW"  REMARK="MB"                  />
+      <LOCATION  NAME="NCSI"                   TYPE="HW"  REMARK="NCSI CARD"           />
+      <LOCATION  NAME="OCULINK"                TYPE="HW"  REMARK="OCULINK"             />
+      <LOCATION  NAME="PCIe Slot #1"           TYPE="HW"  REMARK="RISER CARD"          />
+      <LOCATION  NAME="PCIe Slot #1.R1.CN1"    TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="PCIe Slot #1.R1.CN2"    TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="PCIe Slot #2"           TYPE="HW"  REMARK="RISER CARD"          />
+      <LOCATION  NAME="PCIe Slot #2.R1.CN1"    TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="PCIe Slot #2.R1.CN2"    TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="PCIe Slot #3"           TYPE="HW"  REMARK="RISER CARD"          />
+      <LOCATION  NAME="PCIe Slot #3.R1.CN1"    TYPE="HW"  REMARK="DAUGHTER CARD"       />
+      <LOCATION  NAME="PCIe Slot #4"           TYPE="HW"  REMARK="RISER CARD"          />
+      <LOCATION  NAME="PCIe Slot #4.R1.CN1"    TYPE="HW"  REMARK="DAUGHTER CARD"       />
+      <LOCATION  NAME="PCIe Slot #5"           TYPE="HW"  REMARK="RISER CARD"          />
+      <LOCATION  NAME="PCIe Slot #5.R1.CN1"    TYPE="HW"  REMARK="DAUGHTER CARD"       />
+      <LOCATION  NAME="PSU1"                   TYPE="HW"  REMARK="PSU"                 />
+      <LOCATION  NAME="PSU2"                   TYPE="HW"  REMARK="PSU"                 />
+      <LOCATION  NAME="SATA0"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA1"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA2"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA3"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA4"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA5"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA6"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA7"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA8"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA9"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA10"                 TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA11"                 TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="TPM"                    TYPE="HW"  REMARK="TPM"                 />
+      <LOCATION  NAME="USB1"                   TYPE="HW"  REMARK="EXTERNAL USB"        />
+      <LOCATION  NAME="USB2"                   TYPE="HW"  REMARK="EXTERNAL USB"        />
+      <LOCATION  NAME="USB4"                   TYPE="HW"  REMARK="INTERNAL USB"        />
+      <LOCATION  NAME="ASSETTAG"               TYPE="LBL" REMARK="L10 MSFT ASSET TAG"  />
+      <LOCATION  NAME="CRD"                    TYPE="DOC" REMARK="CRD FILE"            />
+    </C206A_L10>
+
+    <C207A_L10 LEVEL="L10">
+      <LOCATION  NAME="BIOS"                   TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="BMC"                    TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="CPLD"                   TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="FRU"                    TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="VR"                     TYPE="FW"  REMARK="FIRMWARE"            />
+      <LOCATION  NAME="CPU0"                   TYPE="HW"  REMARK="CPU"                 />
+      <LOCATION  NAME="DIMM_A1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_A2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_B1"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="DIMM_B2"                TYPE="HW"  REMARK="DIMM"                />
+      <LOCATION  NAME="M.2_MEZZ"               TYPE="HW"  REMARK="RISER CARD"          />
+      <LOCATION  NAME="M.2_MEZZ.R1.M.2 #1"     TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="M.2_MEZZ.R1.M.2 #2"     TYPE="HW"  REMARK="M.2 SSD"             />
+      <LOCATION  NAME="PCIE_X8"                TYPE="HW"  REMARK="RISER CARD"          />
+      <LOCATION  NAME="OCP_MEZZ"               TYPE="HW"  REMARK="RISER CARD"          />
+      <LOCATION  NAME="M.2_MEZZ"               TYPE="HW"  REMARK="RISER CARD"          />
+      <LOCATION  NAME="PDB"                    TYPE="HW"  REMARK="POWER BOARD"         />
+      <LOCATION  NAME="MB"                     TYPE="HW"  REMARK="MB"                  />
+      <LOCATION  NAME="SATA0"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA1"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA2"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA3"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA4"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA5"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA6"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="SATA7"                  TYPE="HW"  REMARK="HDD"                 />
+      <LOCATION  NAME="PSU1"                   TYPE="HW"  REMARK="PSU"                 />
+      <LOCATION  NAME="FAN"                    TYPE="HW"  REMARK="FAN"                 />
+      <LOCATION  NAME="TPM"                    TYPE="HW"  REMARK="TPM"                 />
+      <LOCATION  NAME="USB1"                   TYPE="HW"  REMARK="EXTERNAL USB"        />
+      <LOCATION  NAME="USB2"                   TYPE="HW"  REMARK="EXTERNAL USB"        />
+      <LOCATION  NAME="VGA"                    TYPE="HW"  REMARK="EXTERNAL VGA"        />
+      <LOCATION  NAME="ASSETTAG"               TYPE="LBL" REMARK="L10 MSFT ASSET TAG"  />
+      <LOCATION  NAME="CRD"                    TYPE="DOC" REMARK="CRD FILE"            />
+    </C207A_L10>
+
+    <C1042_L11 LEVEL="L11">
+      <LOCATION  NAME="CHS1"                   TYPE="HW"  REMARK="E1020 Chassis"       />
+      <LOCATION  NAME="CHS1.B13"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS1.B14"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS1.B15"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS1.B16"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS1.B17"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS1.B18"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS1.B19"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS1.B20"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS1.B21"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS1.B22"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS1.B23"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS1.B24"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS1.FAN"               TYPE="HW"  REMARK="FAN Door"            />
+      <LOCATION  NAME="CHS1.LOC"               TYPE="UC"  REMARK="Chassis Offset"      />
+      <LOCATION  NAME="CHS1.PDB"               TYPE="HW"  REMARK="Chassis Power Board" />
+      <LOCATION  NAME="CHS2"                   TYPE="HW"  REMARK="E1020 Chassis"       />
+      <LOCATION  NAME="CHS2.B13"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS2.B14"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS2.B15"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS2.B16"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS2.B17"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS2.B18"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS2.B19"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS2.B20"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS2.B21"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS2.B22"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS2.B23"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS2.B24"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS2.FAN"               TYPE="HW"  REMARK="FAN Door"            />
+      <LOCATION  NAME="CHS2.LOC"               TYPE="UC"  REMARK="Chassis Offset"      />
+      <LOCATION  NAME="CHS2.PDB"               TYPE="HW"  REMARK="Chassis Power Board" />
+      <LOCATION  NAME="CHS3"                   TYPE="HW"  REMARK="E1020 Chassis"       />
+      <LOCATION  NAME="CHS3.B13"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS3.B14"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS3.B15"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS3.B16"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS3.B17"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS3.B18"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS3.B19"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS3.B20"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS3.B21"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS3.B22"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS3.B23"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS3.B24"               TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="CHS3.FAN"               TYPE="HW"  REMARK="FAN Door"            />
+      <LOCATION  NAME="CHS3.LOC"               TYPE="UC"  REMARK="Chassis Offset"      />
+      <LOCATION  NAME="CHS3.PDB"               TYPE="HW"  REMARK="Chassis Power Board" />
+      <LOCATION  NAME="CM1"                    TYPE="HW"  REMARK="Chassis Manager"     />
+      <LOCATION  NAME="CM1.PSU1"               TYPE="HW"  REMARK="Chassis PSU"         />
+      <LOCATION  NAME="CM1.PSU2"               TYPE="HW"  REMARK="Chassis PSU"         />
+      <LOCATION  NAME="CM1.PSU3"               TYPE="HW"  REMARK="Chassis PSU"         />
+      <LOCATION  NAME="CM1.PSU4"               TYPE="HW"  REMARK="Chassis PSU"         />
+      <LOCATION  NAME="CM1.PSU5"               TYPE="HW"  REMARK="Chassis PSU"         />
+      <LOCATION  NAME="CM1.PSU6"               TYPE="HW"  REMARK="Chassis PSU"         />
+      <LOCATION  NAME="CM2"                    TYPE="HW"  REMARK="Chassis Manager"     />
+      <LOCATION  NAME="CM2.PSU1"               TYPE="HW"  REMARK="Chassis PSU"         />
+      <LOCATION  NAME="CM2.PSU2"               TYPE="HW"  REMARK="Chassis PSU"         />
+      <LOCATION  NAME="CM2.PSU3"               TYPE="HW"  REMARK="Chassis PSU"         />
+      <LOCATION  NAME="CM2.PSU4"               TYPE="HW"  REMARK="Chassis PSU"         />
+      <LOCATION  NAME="CM2.PSU5"               TYPE="HW"  REMARK="Chassis PSU"         />
+      <LOCATION  NAME="CM2.PSU6"               TYPE="HW"  REMARK="Chassis PSU"         />
+      <LOCATION  NAME="CM3"                    TYPE="HW"  REMARK="Chassis Manager"     />
+      <LOCATION  NAME="CM3.PSU1"               TYPE="HW"  REMARK="Chassis PSU"         />
+      <LOCATION  NAME="CM3.PSU2"               TYPE="HW"  REMARK="Chassis PSU"         />
+      <LOCATION  NAME="CM3.PSU3"               TYPE="HW"  REMARK="Chassis PSU"         />
+      <LOCATION  NAME="CM3.PSU4"               TYPE="HW"  REMARK="Chassis PSU"         />
+      <LOCATION  NAME="CM3.PSU5"               TYPE="HW"  REMARK="Chassis PSU"         />
+      <LOCATION  NAME="CM3.PSU6"               TYPE="HW"  REMARK="Chassis PSU"         />
+      <LOCATION  NAME="MINIPDU1"               TYPE="HW"  REMARK="Power Relay"         />
+      <LOCATION  NAME="MPX1"                   TYPE="HW"  REMARK="Load Balance"        />
+      <LOCATION  NAME="MPX1.LOC"               TYPE="UC"  REMARK="Load Balance Offset" />
+      <LOCATION  NAME="PDU1"                   TYPE="HW"  REMARK="Rack PDU"            />
+      <LOCATION  NAME="PDU2"                   TYPE="HW"  REMARK="Rack PDU"            />
+      <LOCATION  NAME="SWITCH1"                TYPE="HW"  REMARK="Rack Data Switch"    />
+      <LOCATION  NAME="UPS1"                   TYPE="HW"  REMARK="Rack UPS"            />
+      <LOCATION  NAME="UPS1.LOC"               TYPE="UC"  REMARK="Rack UPS Offset"     />
+      <LOCATION  NAME="SKU"                    TYPE="DOC" REMARK="SKU FILE"            />
+      <LOCATION  NAME="CRD"                    TYPE="DOC" REMARK="CRD FILE"            />
+    </C1042_L11>
+
+    <C2012_L11 LEVEL="L11">
+      <LOCATION  NAME="CRD"                    TYPE="DOC" REMARK="CRD FILE"            />
+      <LOCATION  NAME="SKU"                    TYPE="DOC" REMARK="SKU FILE"            />
+      <LOCATION  NAME="PMDU"                   TYPE="HW"  REMARK="PMDU"                />
+      <LOCATION  NAME="B01"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B02"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B03"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B04"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B05"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B06"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B07"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B08"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B09"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B10"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B11"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B12"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B13"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B14"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B15"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B16"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B17"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B18"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B19"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B20"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B21"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B22"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B23"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B24"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B25"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B26"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B27"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B28"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B29"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B30"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B31"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B32"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B33"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B34"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B35"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B36"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B37"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B38"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B39"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B40"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B41"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B42"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B43"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B44"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B45"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B46"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B47"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="B48"                    TYPE="HW"  REMARK="Blade Slot"          />
+      <LOCATION  NAME="RM"                     TYPE="HW"  REMARK="Rack Manager"        />
+      <LOCATION  NAME="MINIPDU1"               TYPE="HW"  REMARK="Power Relay"         />
+      <LOCATION  NAME="MINIPDU2"               TYPE="HW"  REMARK="Power Relay"         />
+      <LOCATION  NAME="MPX1"                   TYPE="HW"  REMARK="Load Balance"        />
+      <LOCATION  NAME="DATA_SW"                TYPE="HW"  REMARK="Rack Data Switch"    />
+      <LOCATION  NAME="MGMT_SW"                TYPE="HW"  REMARK="Rack Mgmt Switch"    />
+      <LOCATION  NAME="UPS1"                   TYPE="HW"  REMARK="Rack UPS"            />
+      <LOCATION  NAME="MPX1.LOC"               TYPE="UC"  REMARK="Load Balance Offset" />
+      <LOCATION  NAME="UPS1.LOC"               TYPE="UC"  REMARK="UPS Offset"          />
+      <LOCATION  NAME="DATA_SW.LOC"            TYPE="UC"  REMARK="Data Switch Offset"  />
+      <LOCATION  NAME="MGMT_SW.LOC"            TYPE="UC"  REMARK="Mgmt Switch Offset"  />
+    </C2012_L11>
+  </MODEL>
+</CONFIGURATION>

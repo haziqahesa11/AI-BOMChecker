@@ -1,0 +1,14 @@
+{
+  "name": "crd-postgres-loader",
+  "version": "1.0.0",
+  "private": true,
+  "description": "One-off loader for Database/crd_tracker_postgres.sql against the live crd_tracker Postgres server",
+  "main": "load-schema.js",
+  "scripts": {
+    "load": "node load-schema.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.6.1",
+    "pg": "^8.13.1"
+  }
+}

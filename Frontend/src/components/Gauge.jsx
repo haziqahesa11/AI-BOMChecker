@@ -6,7 +6,7 @@ export default function Gauge({ score, status }) {
   const fillRef = useRef(null)
   const pctRef = useRef(null)
 
-  const color = status === 'PASS' ? '#22c55e' : status === 'WARNING' ? '#f59e0b' : '#ef4444'
+  const color = status === 'PASS' ? 'var(--pass-fg)' : status === 'WARNING' ? 'var(--warn-fg)' : 'var(--fail-fg)'
 
   useEffect(() => {
     requestAnimationFrame(() => {

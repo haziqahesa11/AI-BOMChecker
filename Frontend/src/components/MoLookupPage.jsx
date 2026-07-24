@@ -1,21 +1,32 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import MoLookupForm from './MoLookupForm'
+import PartDetailTabs from './PartDetailTabs'
+import SearchableSelect from './SearchableSelect'
 
 export default function MoLookupPage({ onProceedToCompare }) {
   const [result, setResult]               = useState(null)
   const [loading, setLoading]             = useState(false)
   const [error, setError]                 = useState(null)
-  const [comparePrompt, setComparePrompt] = useState(false)
   const [sendStatus, setSendStatus]       = useState(null) // null | 'queued' | 'in_progress' | 'filled' | 'error'
   const [testBomStatus, setTestBomStatus] = useState(null) // null | 'queued' | 'in_progress' | 'filled' | 'error'
+
+  // Read-only TPG data preview (Location / CRD Cfg / FRU Spec / Rack SKU) —
+  // works around TPG's own SSPI/domain-trust failure on a normal laptop by
+  // reading the same tables through this app's already-working SQL login.
+  const [selectedPn, setSelectedPn]             = useState('')
+  const [partDetail, setPartDetail]             = useState(null)
+  const [partDetailLoading, setPartDetailLoading] = useState(false)
+  const [partDetailError, setPartDetailError]   = useState(null)
 
   async function runLookup(moNumber, moCategory, partNumber) {
     setLoading(true)
     setError(null)
     setResult(null)
-    setComparePrompt(false)
     setSendStatus(null)
     setTestBomStatus(null)
+    setSelectedPn('')
+    setPartDetail(null)
+    setPartDetailError(null)
     try {
       const res = await fetch('/api/mo-lookup', {
         method: 'POST',
@@ -27,7 +38,15 @@ export default function MoLookupPage({ onProceedToCompare }) {
         setError(json.error || `HTTP ${res.status}`)
       } else {
         setResult(json)
-        setComparePrompt(Boolean(json.qvl?.inQVL))
+        if (json.qvl?.partNumber) {
+          setSelectedPn(json.qvl.partNumber)
+        }
+        // BOM already loaded for this exact part number → skip straight to Comparison.
+        // Otherwise the part still needs to go through QVL (done) → TPG / Test BOM below
+        // before a BOM exists to compare against.
+        if (json.qvl?.bomExists) {
+          onProceedToCompare(json.qvl.partNumber)
+        }
       }
     } catch (e) {
       setError('Network error: ' + e.message)
@@ -35,6 +54,24 @@ export default function MoLookupPage({ onProceedToCompare }) {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (!selectedPn) return
+    setPartDetailLoading(true)
+    setPartDetailError(null)
+    fetch('/api/part-detail', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ partNumber: selectedPn }),
+    })
+      .then(async res => {
+        const json = await res.json()
+        if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`)
+        setPartDetail(json)
+      })
+      .catch(e => setPartDetailError(e.message))
+      .finally(() => setPartDetailLoading(false))
+  }, [selectedPn])
 
   function pollJob(jobId) {
     const interval = setInterval(async () => {
@@ -115,6 +152,14 @@ export default function MoLookupPage({ onProceedToCompare }) {
     }
   }
 
+  // Single entry point for the UI: one click drives both the QVL tab and the
+  // Test BOM tab in MonicaTPGenerator, rather than requiring two separate
+  // button clicks for what the user experiences as one "create BOM" action.
+  function createBom() {
+    sendToTpg()
+    sendTestBomToTpg()
+  }
+
   return (
     <>
       <MoLookupForm onLookup={runLookup} loading={loading} />
@@ -152,48 +197,65 @@ export default function MoLookupPage({ onProceedToCompare }) {
                   </p>
                   {result.qvl.inQVL && <p>Description: {result.qvl.description}</p>}
                   <p>({result.qvl.qvlRowCount} total QVL rows checked for this model/location)</p>
+                  {result.qvl.bomExists ? (
+                    <p>✅ BOM already exists for this part number — proceeding to Comparison check…</p>
+                  ) : (
+                    <p>⚠️ No BOM yet for this part number. Send to MonicaTPGenerator below, then re-run Lookup to proceed to Comparison.</p>
+                  )}
                   <div style={{ marginTop: '0.75rem' }}>
-                    {!sendStatus && (
-                      <button className="search-btn" onClick={sendToTpg}>
+                    {!sendStatus && !testBomStatus && (
+                      <button className="search-btn" onClick={createBom}>
                         Send to MonicaTPGenerator
                       </button>
                     )}
-                    {sendStatus === 'queued' && <p>Queued for MonicaTPGenerator…</p>}
-                    {sendStatus === 'filled' && <p>✅ Fields filled — review and submit in TPG.</p>}
-                    {sendStatus === 'error' && <p>⚠️ Autofill failed — check the agent log.</p>}
-                  </div>
-                  <div style={{ marginTop: '0.5rem' }}>
-                    {!testBomStatus && (
-                      <button className="search-btn" onClick={sendTestBomToTpg}>
-                        Send Test BOM to MonicaTPGenerator
-                      </button>
+                    {(sendStatus || testBomStatus) && (
+                      <>
+                        <p>
+                          QVL tab:{' '}
+                          {sendStatus === 'queued' && 'queued…'}
+                          {sendStatus === 'filled' && '✅ filled — review and submit in TPG.'}
+                          {sendStatus === 'error' && '⚠️ autofill failed — check the agent log.'}
+                        </p>
+                        <p>
+                          Test BOM:{' '}
+                          {testBomStatus === 'queued' && 'queued…'}
+                          {testBomStatus === 'filled' && '✅ loaded — review and submit in TPG.'}
+                          {testBomStatus === 'error' && '⚠️ autofill failed — check the agent log.'}
+                        </p>
+                      </>
                     )}
-                    {testBomStatus === 'queued' && <p>Test BOM queued for MonicaTPGenerator…</p>}
-                    {testBomStatus === 'filled' && <p>✅ Test BOM loaded — review and submit in TPG.</p>}
-                    {testBomStatus === 'error' && <p>⚠️ Test BOM autofill failed — check the agent log.</p>}
                   </div>
                 </div>
               )}
-              {comparePrompt && result.qvl && (
-                <div className="state-box" style={{ marginBottom: '1rem' }}>
-                  <div className="icon">❓</div>
-                  <h3>This MO {result.qvl.location} is already in the database</h3>
-                  <p>Do you want to proceed for Comparison checking?</p>
-                  <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginTop: '0.75rem' }}>
-                    <button
-                      className="search-btn"
-                      onClick={() => {
-                        setComparePrompt(false)
-                        onProceedToCompare(result.qvl.partNumber)
-                      }}
-                    >
-                      Yes
-                    </button>
-                    <button className="search-btn" onClick={() => setComparePrompt(false)}>
-                      No
-                    </button>
+              {result.qvl && (
+                <>
+                  <h3>TPG Data Preview</h3>
+                  <p style={{ marginBottom: '0.75rem' }}>
+                    Reads the same tables MonicaTPGenerator.exe shows, directly — for laptops
+                    where TPG itself can't reach SQL (see tools/monica-access/README.md).
+                  </p>
+                  <div style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <label>Part Number:</label>
+                    <SearchableSelect
+                      options={[
+                        ...(selectedPn && !result.qvl.qvlList?.some(r => r.partNumber === selectedPn)
+                          ? [{ value: selectedPn, label: `${selectedPn} (not in QVL)` }]
+                          : []),
+                        ...(result.qvl.qvlList || []).map(r => ({
+                          value: r.partNumber,
+                          label: r.partNumber + (r.description ? ` — ${r.description}` : ''),
+                        })),
+                      ]}
+                      value={selectedPn}
+                      onChange={setSelectedPn}
+                      placeholder={`Type to search ${result.qvl.qvlList?.length || 0} part numbers…`}
+                    />
                   </div>
-                </div>
+
+                  {partDetailLoading && <p>Loading part detail…</p>}
+                  {partDetailError && <p>⚠️ {partDetailError}</p>}
+                  {!partDetailLoading && <PartDetailTabs partDetail={partDetail} />}
+                </>
               )}
               <h3>Request sent to MO API</h3>
               <pre className="mo-result-pre">{JSON.stringify(result.requestParams, null, 2)}</pre>

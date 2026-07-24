@@ -1,7 +1,7 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const { sql, query } = require('./DB');
+const { sql, query, annonPool, annonWritePool } = require('./DB');
 const { fetchMoItem } = require('./services/moApiClient');
 
 require('dotenv').config({ path: path.join(__dirname, '..', 'config', 'credentials', 'automation.env') });
@@ -18,6 +18,18 @@ if (fs.existsSync(clientDist)) {
 
 // Pattern for CRD spec part numbers: e.g. M1389927-001
 const CRD_PN_PATTERN = /^[A-Z]\d{7}-\d{3}$/;
+
+// Identify the CRD reference row inside a SysBom row set.
+//   Criteria: ChildPartNumber matches M1234567-001 pattern, or Location/Type = 'CRD'
+// Shared by /api/compare and /api/part-detail — both derive the same
+// CRDspec/FRUspec lookup key (SpecNumber) from this one row.
+function findCrdRefRow(bomRows) {
+  return bomRows.find(r =>
+    CRD_PN_PATTERN.test((r.ChildPartNumber || '').trim()) ||
+    (r.Location || '').toUpperCase() === 'CRD' ||
+    (r.Type || '').toUpperCase() === 'CRD'
+  );
+}
 
 // ── API: compare BOM vs CRD ────────────────────────────────────────────────
 app.post('/api/compare', async (req, res) => {
@@ -41,12 +53,7 @@ app.post('/api/compare', async (req, res) => {
     }
 
     // Step 2 – Identify the CRD reference row inside the BOM
-    //   Criteria: ChildPartNumber matches M1234567-001 pattern, or Location/Type = 'CRD'
-    const crdRefRow = bomRows.find(r =>
-      CRD_PN_PATTERN.test((r.ChildPartNumber || '').trim()) ||
-      (r.Location || '').toUpperCase() === 'CRD' ||
-      (r.Type || '').toUpperCase() === 'CRD'
-    );
+    const crdRefRow = findCrdRefRow(bomRows);
 
     if (!crdRefRow) {
       return res.json({
@@ -123,6 +130,20 @@ const MO_CATEGORY_TO_QVL = {
   L11: { modelRef: 'C2012_L11', location: 'L11' },
 };
 
+// Read-only: SP_QVL_Query_DESC(ModelRef, Location) → [{ModelRef, Location, PartNumber, Description}].
+// Shared by /api/mo-lookup (fixed L10/L11 models) and /api/qvl-list (any model
+// from /api/models) — same query, just not hardcoded to one model reference.
+async function fetchQvlList(modelRef, location) {
+  const qvlResult = await query(
+    'EXEC BOM.dbo.SP_QVL_Query_DESC @ModelRef = @modelRef, @Location = @location',
+    [
+      { name: 'modelRef', type: sql.NVarChar, value: modelRef },
+      { name: 'location', type: sql.NVarChar, value: location }
+    ]
+  );
+  return qvlResult.recordset;
+}
+
 // ── API: MO lookup + QVL check ──────────────────────────────────────────────
 app.post('/api/mo-lookup', async (req, res) => {
   const { moNumber, moCategory, partNumber } = req.body;
@@ -145,17 +166,16 @@ app.post('/api/mo-lookup', async (req, res) => {
         return res.status(400).json({ error: `Unknown MO Category "${moCategory}".` });
       }
 
-      // Read-only: SP_QVL_Query_DESC(ModelRef, Location) → [{ModelRef, Location, PartNumber, Description}]
-      const qvlResult = await query(
-        'EXEC BOM.dbo.SP_QVL_Query_DESC @ModelRef = @modelRef, @Location = @location',
-        [
-          { name: 'modelRef', type: sql.NVarChar, value: target.modelRef },
-          { name: 'location', type: sql.NVarChar, value: target.location }
-        ]
-      );
-      const qvlRows = qvlResult.recordset;
+      const qvlRows = await fetchQvlList(target.modelRef, target.location);
       const pn = partNumber.trim();
       const match = qvlRows.find(r => (r.PartNumber || '').trim().toUpperCase() === pn.toUpperCase());
+
+      // Read-only: does this exact part number already have a BOM loaded?
+      // Distinct from inQVL above — a part can be known to QVL before its BOM exists.
+      const bomCheck = await query(
+        'SELECT TOP 1 1 AS found FROM bom.dbo.SysBom WHERE ParentPartNumber = @pn',
+        [{ name: 'pn', type: sql.NVarChar, value: pn }]
+      );
 
       response.qvl = {
         modelRef: target.modelRef,
@@ -163,11 +183,529 @@ app.post('/api/mo-lookup', async (req, res) => {
         partNumber: pn,
         inQVL: Boolean(match),
         description: match ? match.Description : null,
-        qvlRowCount: qvlRows.length
+        qvlRowCount: qvlRows.length,
+        qvlList: qvlRows.map(r => ({ partNumber: r.PartNumber, description: r.Description })),
+        bomExists: bomCheck.recordset.length > 0
       };
     }
 
     res.json(response);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── API: full Model Reference list (for the TPG Check page's dropdown) ─────
+//
+// Read-only: SP_LocationTable_Model_Distinct → [{ModelRef, Level}]. The
+// vendored MonicaTPGenerator.xml fixture only defines 9 of these — it's a
+// stale snapshot — so this queries live instead of parsing that file.
+app.get('/api/models', async (req, res) => {
+  try {
+    const result = await query('EXEC BOM.dbo.SP_LocationTable_Model_Distinct');
+    res.json({
+      models: result.recordset.map(r => ({ modelRef: r.ModelRef, location: r.Level }))
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── API: CRD Tracker — list, one row per L10 component (latest week only) ──
+app.get('/api/crd-tracker/lines', async (req, res) => {
+  try {
+    const [linesResult, currentWeekResult] = await Promise.all([
+      annonPool.query(`
+        WITH latest_week AS (
+          SELECT DISTINCT ON (line_id)
+            line_id, week_label, crd_code, iso_year, work_week
+          FROM tracking.crdbom_week_status
+          ORDER BY line_id, iso_year DESC, work_week DESC
+        )
+        SELECT
+          l.id                                  AS line_id,
+          c.id                                  AS component_id,
+          l.line_no                             AS no,
+          l.gen                                 AS gen,
+          l.l11_msf                             AS l11_msf,
+          l.l11_sku                             AS l11_sku,
+          l.crd_number                          AS crd_number,
+          c.l10_msf                             AS l10_msf,
+          c.l10_sku                             AS l10_sku,
+          l.wts_ticket                          AS wts_ticket,
+          l.wts_link                            AS wts_link,
+          c.current_crd_te                      AS current_crd_te,
+          to_char(c.date_update, 'YYYY-MM-DD')  AS date_update,
+          lw.week_label                         AS latest_week_label,
+          lw.crd_code                           AS latest_crd_code,
+          lw.iso_year                           AS latest_iso_year,
+          lw.work_week                          AS latest_work_week
+        FROM tracking.crdbom_line l
+        LEFT JOIN tracking.crdbom_component c ON c.line_id = l.id
+        LEFT JOIN latest_week lw            ON lw.line_id = l.id
+        ORDER BY l.line_no, c.id
+      `),
+      annonPool.query(`
+        SELECT
+          EXTRACT(isoyear FROM CURRENT_DATE)::int AS current_iso_year,
+          EXTRACT(week     FROM CURRENT_DATE)::int AS current_work_week
+      `),
+    ]);
+    const { current_iso_year, current_work_week } = currentWeekResult.rows[0];
+    const rows = [
+      ...linesResult.rows.map(r => ({
+        lineId: r.line_id,
+        componentId: r.component_id,
+        no: r.no,
+        gen: r.gen,
+        l11Msf: r.l11_msf,
+        l11Sku: r.l11_sku,
+        crdNumber: r.crd_number,
+        l10Msf: r.l10_msf,
+        l10Sku: r.l10_sku,
+        wtsTicket: r.wts_ticket,
+        wtsLink: r.wts_link,
+        currentCrdTe: r.current_crd_te,
+        dateUpdate: r.date_update,
+        latestWeekLabel: r.latest_week_label,
+        latestCrdCode: r.latest_crd_code,
+        latestIsoYear: r.latest_iso_year,
+        latestWorkWeek: r.latest_work_week,
+        isTest: false,
+      })),
+      ...[...crdTestLines.values()].map(({ testHistory, ...row }) => row),
+    ].sort((a, b) => a.no - b.no);
+    res.json({
+      currentIsoYear: current_iso_year,
+      currentWorkWeek: current_work_week,
+      rows,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── API: CRD Tracker — full weekly history for one line (drill-down) ──────
+app.get('/api/crd-tracker/lines/:lineId/history', async (req, res) => {
+  const lineId = Number(req.params.lineId);
+  if (!Number.isInteger(lineId) || lineId === 0) {
+    return res.status(400).json({ error: 'lineId must be a non-zero integer.' });
+  }
+  // Negative lineId = synthetic id for an in-memory Test line — served from
+  // its own local history, never queries Postgres.
+  if (lineId < 0) {
+    const testRow = crdTestLines.get(-lineId);
+    if (!testRow) return res.status(404).json({ error: `Test line ${-lineId} not found.` });
+    return res.json({ lineId, history: testRow.testHistory || [] });
+  }
+  try {
+    const result = await annonPool.query(
+      `SELECT
+         week_label,
+         iso_year,
+         work_week,
+         to_char(week_start_date, 'YYYY-MM-DD') AS week_start_date,
+         crd_code
+       FROM tracking.crdbom_week_status
+       WHERE line_id = $1
+       ORDER BY iso_year ASC, work_week ASC`,
+      [lineId]
+    );
+    res.json({
+      lineId,
+      history: result.rows.map(r => ({
+        weekLabel: r.week_label,
+        isoYear: r.iso_year,
+        workWeek: r.work_week,
+        weekStartDate: r.week_start_date,
+        crdCode: r.crd_code,
+      })),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── CRD Tracker: revision-code vocabulary ──────────────────────────────────
+// Tries the live dimension table first; falls back to computing the same
+// bijective base-26 sequence in JS if it's ever unreachable/empty. Verified
+// against tracking.crdbom_revision_code's seed data: A=1..H=8, J=10..N=14,
+// P=16, R=18, T=20..W=23, Y=25, then two-letter AA=27.., skipping I/O/Q/S/X/Z
+// at each letter position. In the fallback case there's no DB-level FK
+// validating crd_code/current_crd_te — only this app-level check does.
+const REVISION_LETTERS = ['A','B','C','D','E','F','G','H','J','K','L','M','N','P','R','T','U','V','W','Y'];
+const letterPos = ch => ch.charCodeAt(0) - 64; // 'A'->1 ... 'Z'->26
+
+function computeFallbackRevisionCodes() {
+  const codes = REVISION_LETTERS.map(l => ({ code: l, seq: letterPos(l) }));
+  for (const l1 of REVISION_LETTERS)
+    for (const l2 of REVISION_LETTERS)
+      codes.push({ code: l1 + l2, seq: 26 * letterPos(l1) + letterPos(l2) });
+  return codes.sort((a, b) => a.seq - b.seq);
+}
+
+let revisionCodeCache = null; // resolved once per process lifetime
+async function getRevisionCodes() {
+  if (revisionCodeCache) return revisionCodeCache;
+  try {
+    const r = await annonPool.query('SELECT code, seq FROM tracking.crdbom_revision_code ORDER BY seq');
+    if (r.rows.length > 0) {
+      revisionCodeCache = { source: 'db', codes: r.rows };
+      return revisionCodeCache;
+    }
+  } catch (err) {
+    console.warn('tracking.crdbom_revision_code unusable, using computed fallback:', err.message);
+  }
+  revisionCodeCache = { source: 'computed', codes: computeFallbackRevisionCodes() };
+  return revisionCodeCache;
+}
+
+app.get('/api/crd-tracker/revision-codes', async (req, res) => {
+  try {
+    res.json(await getRevisionCodes());
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── CRD Tracker: in-memory "Test" rows (New SKU > Test) ────────────────────
+// Never touch Postgres — same ephemeral-Map convention as automationJobs
+// below. Keyed by a synthetic negative id so it can never collide with a
+// real Postgres serial id when merged into GET /api/crd-tracker/lines.
+const crdTestLines = new Map(); // testId (number) -> row shaped like a /lines row
+let nextCrdTestLineId = 1;
+
+// Shared validation for the New SKU form, used by both the real and test
+// creation endpoints below.
+function validateNewSkuBody(body) {
+  const { no, l11Msf, l11Sku, l10Msf, l10Sku } = body;
+  if (!Number.isInteger(no) || no <= 0) return 'No must be a positive integer.';
+  if (!l11Msf?.trim() || !l11Sku?.trim() || !l10Msf?.trim() || !l10Sku?.trim())
+    return 'L11 MSF, L11 SKU, L10 MSF, and L10 SKU are required.';
+  return null;
+}
+
+// ── API: CRD Tracker — create a new tracked line + L10 component (real) ────
+app.post('/api/crd-tracker/lines', async (req, res) => {
+  const { no, gen, l11Msf, l11Sku, crdNumber, l10Msf, l10Sku, wtsTicket, wtsLink, latestCrd } = req.body;
+  const validationError = validateNewSkuBody(req.body);
+  if (validationError) return res.status(400).json({ error: validationError });
+
+  let crdCode = null;
+  if (latestCrd?.trim()) {
+    crdCode = latestCrd.trim().toUpperCase();
+    const { codes } = await getRevisionCodes();
+    if (!codes.some(c => c.code === crdCode)) {
+      return res.status(400).json({ error: `"${crdCode}" is not a recognized CRD revision code.` });
+    }
+  }
+
+  const client = await annonWritePool.connect();
+  try {
+    await client.query('BEGIN');
+    const lineResult = await client.query(
+      `INSERT INTO tracking.crdbom_line (line_no, gen, l11_msf, l11_sku, crd_number, wts_ticket, wts_link)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+      [no, gen ?? null, l11Msf.trim(), l11Sku.trim(), crdNumber?.trim() || null, wtsTicket?.trim() || null, wtsLink?.trim() || null]
+    );
+    const lineId = lineResult.rows[0].id;
+    const compResult = await client.query(
+      `INSERT INTO tracking.crdbom_component (line_id, l10_msf, l10_sku, current_crd_te, date_update)
+       VALUES ($1,$2,$3,$4, CURRENT_DATE) RETURNING id`,
+      [lineId, l10Msf.trim(), l10Sku.trim(), crdCode]
+    );
+    await client.query('COMMIT');
+    res.json({ ok: true, lineId, componentId: compResult.rows[0].id });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    if (err.code === '23505') return res.status(409).json({ error: `Line No ${no} already exists.` });
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+});
+
+// ── API: CRD Tracker — create a Test-only line (never touches Postgres) ────
+app.post('/api/crd-tracker/test-lines', async (req, res) => {
+  const { no, gen, l11Msf, l11Sku, crdNumber, l10Msf, l10Sku, wtsTicket, wtsLink, latestCrd } = req.body;
+  const validationError = validateNewSkuBody(req.body);
+  if (validationError) return res.status(400).json({ error: validationError });
+
+  let crdCode = null;
+  if (latestCrd?.trim()) {
+    crdCode = latestCrd.trim().toUpperCase();
+    const { codes } = await getRevisionCodes();
+    if (!codes.some(c => c.code === crdCode)) {
+      return res.status(400).json({ error: `"${crdCode}" is not a recognized CRD revision code.` });
+    }
+  }
+
+  const testId = nextCrdTestLineId++;
+  const syntheticId = -testId;
+  const row = {
+    lineId: syntheticId,
+    componentId: syntheticId,
+    testId,
+    no,
+    gen: gen ?? null,
+    l11Msf: l11Msf.trim(),
+    l11Sku: l11Sku.trim(),
+    crdNumber: crdNumber?.trim() || null,
+    l10Msf: l10Msf.trim(),
+    l10Sku: l10Sku.trim(),
+    wtsTicket: wtsTicket?.trim() || null,
+    wtsLink: wtsLink?.trim() || null,
+    currentCrdTe: crdCode,
+    dateUpdate: new Date().toISOString().slice(0, 10),
+    latestWeekLabel: null,
+    latestCrdCode: null,
+    latestIsoYear: null,
+    latestWorkWeek: null,
+    isTest: true,
+    testHistory: [], // populated by WW Rev Update; local-only weekly history
+  };
+  crdTestLines.set(testId, row);
+  res.json({ ok: true, testId });
+});
+
+// Reads the current ISO year/work-week from Postgres (matches EXTRACT() used
+// elsewhere in this feature) — a plain SELECT, safe on the read-only pool.
+// Shared by both the real and Test branches of WW Rev Update so "this week"
+// always means the same thing regardless of which branch handles the write.
+async function getCurrentIsoWeek() {
+  const r = await annonPool.query(
+    `SELECT EXTRACT(isoyear FROM CURRENT_DATE)::int AS iso_year,
+            EXTRACT(week FROM CURRENT_DATE)::int AS work_week`
+  );
+  return r.rows[0];
+}
+
+// Monday of the current ISO week, for Test rows' local history (mirrors
+// Postgres's date_trunc('week', CURRENT_DATE) used on the real write path).
+function currentIsoWeekMonday() {
+  const d = new Date();
+  const day = d.getDay() || 7; // Sunday=0 -> 7
+  d.setDate(d.getDate() - day + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+// ── API: CRD Tracker — record this week's CRD revision for an existing line ─
+app.post('/api/crd-tracker/ww-rev-update', async (req, res) => {
+  const { lineId, crdCode } = req.body;
+  if (!Number.isInteger(lineId) || lineId === 0) {
+    return res.status(400).json({ error: 'lineId must resolve to an existing line.' });
+  }
+  if (!crdCode?.trim()) return res.status(400).json({ error: 'crdCode is required.' });
+  const code = crdCode.trim().toUpperCase();
+  try {
+    const { codes } = await getRevisionCodes();
+    const match = codes.find(c => c.code === code);
+    if (!match) return res.status(400).json({ error: `"${code}" is not a recognized CRD revision code.` });
+
+    const { iso_year, work_week } = await getCurrentIsoWeek();
+    const weekLabel = `WW${work_week}`;
+
+    // Negative lineId = synthetic id for an in-memory Test line — updates
+    // that row's local history only, never touches Postgres.
+    if (lineId < 0) {
+      const testId = -lineId;
+      const row = crdTestLines.get(testId);
+      if (!row) return res.status(404).json({ error: `Test line ${testId} not found.` });
+      row.latestWeekLabel = weekLabel;
+      row.latestCrdCode = code;
+      row.latestIsoYear = iso_year;
+      row.latestWorkWeek = work_week;
+      const entry = { weekLabel, isoYear: iso_year, workWeek: work_week, weekStartDate: currentIsoWeekMonday(), crdCode: code };
+      const existingIdx = row.testHistory.findIndex(h => h.isoYear === iso_year && h.workWeek === work_week);
+      if (existingIdx >= 0) row.testHistory[existingIdx] = entry;
+      else row.testHistory.push(entry);
+      return res.json({ ok: true, weekStatus: { week_label: weekLabel, crd_code: code } });
+    }
+
+    const upsert = await annonWritePool.query(
+      `INSERT INTO tracking.crdbom_week_status
+         (line_id, iso_year, work_week, week_label, week_start_date, crd_code, crd_seq)
+       VALUES ($1, $2, $3, $4, (date_trunc('week', CURRENT_DATE))::date, $5, $6)
+       ON CONFLICT (line_id, iso_year, work_week)
+       DO UPDATE SET crd_code = EXCLUDED.crd_code, crd_seq = EXCLUDED.crd_seq
+       RETURNING id, week_label, crd_code`,
+      [lineId, iso_year, work_week, weekLabel, code, match.seq]
+    );
+    res.json({ ok: true, weekStatus: upsert.rows[0] });
+  } catch (err) {
+    if (err.code === '23503') return res.status(404).json({ error: `Line ${lineId} not found.` });
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── API: CRD Tracker — delete a whole tracked line (cascades) ──────────────
+app.delete('/api/crd-tracker/lines/:lineId', async (req, res) => {
+  const lineId = Number(req.params.lineId);
+  if (!Number.isInteger(lineId) || lineId <= 0) {
+    return res.status(400).json({ error: 'lineId must be a positive integer.' });
+  }
+  if (req.query.confirm !== 'true') {
+    return res.status(400).json({ error: 'Delete requires confirm=true.' });
+  }
+  const client = await annonWritePool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('DELETE FROM tracking.crdbom_week_status WHERE line_id = $1', [lineId]);
+    await client.query('DELETE FROM tracking.crdbom_component WHERE line_id = $1', [lineId]);
+    const result = await client.query('DELETE FROM tracking.crdbom_line WHERE id = $1 RETURNING id', [lineId]);
+    if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: `Line ${lineId} not found.` });
+    }
+    await client.query('COMMIT');
+    res.json({ ok: true, deleted: { type: 'line', id: lineId } });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+});
+
+// ── API: CRD Tracker — delete a single L10 component row ───────────────────
+app.delete('/api/crd-tracker/components/:componentId', async (req, res) => {
+  const componentId = Number(req.params.componentId);
+  if (!Number.isInteger(componentId) || componentId <= 0) {
+    return res.status(400).json({ error: 'componentId must be a positive integer.' });
+  }
+  if (req.query.confirm !== 'true') {
+    return res.status(400).json({ error: 'Delete requires confirm=true.' });
+  }
+  try {
+    const result = await annonWritePool.query('DELETE FROM tracking.crdbom_component WHERE id = $1 RETURNING id', [componentId]);
+    if (result.rows.length === 0) return res.status(404).json({ error: `Component ${componentId} not found.` });
+    res.json({ ok: true, deleted: { type: 'component', id: componentId } });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── API: CRD Tracker — delete a Test-only line (never touched Postgres) ────
+app.delete('/api/crd-tracker/test-lines/:testId', (req, res) => {
+  const testId = Number(req.params.testId);
+  if (!crdTestLines.has(testId)) return res.status(404).json({ error: 'Unknown test row.' });
+  crdTestLines.delete(testId);
+  res.json({ ok: true, deleted: { type: 'test', id: testId } });
+});
+
+// ── API: QVL part list for an arbitrary Model Reference ────────────────────
+app.post('/api/qvl-list', async (req, res) => {
+  const { modelRef, location } = req.body;
+  if (!modelRef?.trim() || !location?.trim()) {
+    return res.status(400).json({ error: 'modelRef and location are required.' });
+  }
+  try {
+    const qvlRows = await fetchQvlList(modelRef.trim(), location.trim());
+    res.json({
+      qvlList: qvlRows.map(r => ({ partNumber: r.PartNumber, description: r.Description }))
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── API: read-only part detail (Location / CRD Cfg / FRU Spec / Rack SKU) ──
+//
+// Reproduces what MonicaTPGenerator.exe's Test BOM tab shows, for laptops
+// where TPG itself can't reach SQL (Windows-auth domain trust failure — see
+// tools/monica-access/README.md's "Second blocker" section). Reads the exact
+// same tables via this app's already-authorized SQL-auth connection.
+app.post('/api/part-detail', async (req, res) => {
+  const { partNumber } = req.body;
+  if (!partNumber?.trim()) {
+    return res.status(400).json({ error: 'Part number is required.' });
+  }
+
+  const pn = partNumber.trim();
+
+  try {
+    const bomResult = await query(
+      'SELECT * FROM bom.dbo.SysBom WHERE ParentPartNumber = @pn',
+      [{ name: 'pn', type: sql.NVarChar, value: pn }]
+    );
+    const bomRows = bomResult.recordset;
+
+    // Descriptions live in a separate table, keyed by ChildPartNumber (not a
+    // column on SysBom itself) — batch-fetch the distinct set in one query
+    // rather than one round-trip per row (TPG's own Test BOM grid shows this
+    // per-row, e.g. "NO_DEVICE" -> "NO DEVICE WAS INSTALLED").
+    const childPNs = [...new Set(bomRows.map(r => (r.ChildPartNumber || '').trim()).filter(Boolean))];
+    const descMap = new Map();
+    if (childPNs.length) {
+      const params = childPNs.map((v, i) => ({ name: `pn${i}`, type: sql.NVarChar, value: v }));
+      const placeholders = params.map(p => `@${p.name}`).join(', ');
+      const descResult = await query(
+        `SELECT PartNumber, Description FROM bom.dbo.PartDescription WHERE PartNumber IN (${placeholders})`,
+        params
+      );
+      descResult.recordset.forEach(r => descMap.set(r.PartNumber, r.Description));
+    }
+    // ParentPartNumber is dropped here — it's always just the requested part
+    // number, redundant on every single row of this view.
+    const locationRows = bomRows.map(r => ({
+      Location: r.Location,
+      Type: r.Type,
+      Quantity: r.Quantity,
+      Level: r.Level,
+      ChildPartNumber: r.ChildPartNumber,
+      ChildRevision: r.ChildRevision,
+      Remark: r.Remark,
+      Description: descMap.get((r.ChildPartNumber || '').trim()) || null
+    }));
+
+    const crdRefRow = findCrdRefRow(bomRows);
+    const crdPN = crdRefRow ? (crdRefRow.ChildPartNumber || '').trim() : null;
+
+    let crd = { specNumber: crdPN, found: false, rows: [] };
+    let fru = { specNumber: crdPN, found: false, rows: [] };
+
+    if (crdPN) {
+      const [crdResult, fruResult] = await Promise.all([
+        query(
+          'SELECT * FROM MSFT_SKU.dbo.CRDspec WHERE SpecNumber = @crdpn ORDER BY Line',
+          [{ name: 'crdpn', type: sql.NVarChar, value: crdPN }]
+        ),
+        query(
+          'SELECT * FROM MSFT_SKU.dbo.FRUspec WHERE SpecNumber = @crdpn ORDER BY Line',
+          [{ name: 'crdpn', type: sql.NVarChar, value: crdPN }]
+        )
+      ]);
+      crd = { specNumber: crdPN, found: crdResult.recordset.length > 0, rows: crdResult.recordset };
+      fru = { specNumber: crdPN, found: fruResult.recordset.length > 0, rows: fruResult.recordset };
+    }
+
+    const itemNumber = pn.split('$')[0];
+    const skuResult = await query(
+      'SELECT TOP 1 * FROM MSFT_SKU.dbo.PartProperties WHERE ItemNumber = @itemNumber',
+      [{ name: 'itemNumber', type: sql.NVarChar, value: itemNumber }]
+    );
+
+    res.json({
+      partNumber: pn,
+      location: { rows: locationRows },
+      crd,
+      fru,
+      rackSku: {
+        itemNumber,
+        found: skuResult.recordset.length > 0,
+        row: skuResult.recordset[0] || null
+      }
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });

@@ -5,8 +5,8 @@ function DistChart({ pass, fail, bomOnly, crdOnly }) {
   const bars = [
     { label: 'Pass',     value: pass,    color: 'var(--pass-fg)', pct: (pass / total) * 100 },
     { label: 'Fail',     value: fail,    color: 'var(--fail-fg)', pct: (fail / total) * 100 },
-    { label: 'BOM Only', value: bomOnly, color: '#60a5fa',         pct: (bomOnly / total) * 100 },
-    { label: 'CRD Only', value: crdOnly, color: '#a78bfa',         pct: (crdOnly / total) * 100 },
+    { label: 'BOM Only', value: bomOnly, color: 'var(--info-fg)',   pct: (bomOnly / total) * 100 },
+    { label: 'CRD Only', value: crdOnly, color: 'var(--purple-fg)', pct: (crdOnly / total) * 100 },
   ]
 
   return (

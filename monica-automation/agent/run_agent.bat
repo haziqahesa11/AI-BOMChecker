@@ -1,7 +1,8 @@
 @echo off
-rem Convenience launcher for the QVL autofill agent, meant to run inside the
-rem persistent logged-in session on 10.251.231.65 (e.g. from Task Scheduler,
-rem "run only when user is logged on", or just left open in a terminal).
+rem Convenience launcher for the QVL autofill agent. Runs on a normal
+rem engineering laptop alongside BackEnd/server.js and TPG itself — see
+rem ../../tools/monica-access/README.md for why this works directly (no RDP
+rem needed). Leave this running in a terminal, or launch it at logon.
 cd /d "%~dp0.."
 if not exist ".venv\Scripts\python.exe" (
   echo No .venv found here. Run: python -m venv .venv ^&^& .venv\Scripts\pip install -r requirements.txt

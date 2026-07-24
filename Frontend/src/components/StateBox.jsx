@@ -1,10 +1,10 @@
-export default function StateBox({ type, pn, message }) {
+export default function StateBox({ type, pn, message, title }) {
   if (type === 'empty') {
     return (
       <div className="state-box">
         <div className="icon">🔍</div>
-        <h3>Enter a Part Number to Begin</h3>
-        <p>Type a BOM Parent Part Number above and click Search &amp; Compare.</p>
+        <h3>{title || 'Enter a Part Number to Begin'}</h3>
+        <p>{message || <>Type a BOM Parent Part Number above and click Search &amp; Compare.</>}</p>
       </div>
     )
   }
@@ -12,8 +12,8 @@ export default function StateBox({ type, pn, message }) {
     return (
       <div className="state-box">
         <div className="spinner" />
-        <h3>Searching BOM &amp; CRD…</h3>
-        <p>Querying databases for <code>{pn}</code></p>
+        <h3>{title || 'Searching BOM & CRD…'}</h3>
+        <p>{message || <>Querying databases for <code>{pn}</code></>}</p>
       </div>
     )
   }
@@ -21,7 +21,7 @@ export default function StateBox({ type, pn, message }) {
     return (
       <div className="state-box error">
         <div className="icon">⚠️</div>
-        <h3>Error</h3>
+        <h3>{title || 'Error'}</h3>
         <p>{message}</p>
       </div>
     )

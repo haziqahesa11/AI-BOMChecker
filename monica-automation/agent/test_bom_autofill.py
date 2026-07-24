@@ -37,6 +37,7 @@ from monica.bom_builder import build_csv, resolve_test_bom_rows
 
 from .config import AgentConfig
 from .job_client import Job
+from .tpg_process import connect_or_launch
 
 logger = logging.getLogger("agent.test_bom_autofill")
 
@@ -62,9 +63,10 @@ def fill_test_bom_tab(config: AgentConfig, job: Job) -> None:
     csv_path = _staged_csv_path(job)
     build_csv(rows, csv_path)  # raises NotImplementedError until the schema is confirmed
 
-    app = Application(backend="win32").connect(path=config.tpg_exe_path, timeout=5)
+    # connect_or_launch attaches to an already-open TPG, or launches it fresh
+    # from the vendored repo copy if it isn't running yet — see tpg_process.py.
+    app = connect_or_launch(config)
     window = app.window(title_re=".*Monica.*Test.*Program.*Generator.*")
-    window.set_focus()
 
     top_tab = window.child_window(auto_id="tabCtl", control_type="System.Windows.Forms.TabControl")
     top_tab.select("Test BOM")
