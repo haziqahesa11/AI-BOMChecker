@@ -51,6 +51,19 @@ const annonConnConfig = {
   port: 5432,
 };
 
+
+// SFCS DB (remote)
+// options: force MYT session so TIMESTAMP comparisons align with local stored times
+const sfcsPool = new Pool({
+  user: "tdp_admin",
+  host: "10.251.228.59",
+  database: "tdp_db",
+  password: "tdp@WYMY",
+  port: 5432,
+  options: "-c timezone=Asia/Kuala_Lumpur",
+});
+
+
 const annonPool = new Pool(annonConnConfig);
 
 // Without this handler, a network blip on an idle pooled client fires an

@@ -21,8 +21,11 @@ Usage:
 """
 
 import argparse
+import io
+import os
 import subprocess
 import sys
+import tarfile
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -31,14 +34,40 @@ REMOTE_DIR = "~/AI_BOM"
 PM2_PROCESS = "ai-bom-online"
 PORT = 8000
 
-EXCLUDES = [
-    "--exclude=BackEnd/node_modules",
-    "--exclude=BackEnd/scripts",
-    "--exclude=Frontend/node_modules",
-    "--exclude=Frontend/dist",
+EXCLUDE_DIRS = [
+    Path("BackEnd") / "node_modules",
+    Path("BackEnd") / "scripts",
+    Path("Frontend") / "node_modules",
+    Path("Frontend") / "dist",
 ]
 INCLUDE_PATHS = ["BackEnd", "Frontend", "package.json"]
 CRED_FILES = ["sql.env", "automation.env"]
+
+
+def build_tar_bytes() -> bytes:
+    """Build the deploy tarball with Python's own tarfile module instead of
+    shelling out to a system `tar`. Different tar implementations (GNU tar
+    vs Windows' built-in bsdtar) write incompatible extended headers (e.g.
+    bsdtar's SCHILY.fflags), which the target's GNU tar silently mishandles
+    on extraction -- and which one a bare `tar` resolves to isn't consistent
+    across shells (Git Bash vs plain PowerShell). Building the archive in
+    Python sidesteps that entirely, on any OS.
+    """
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w:gz", format=tarfile.GNU_FORMAT) as tar:
+        for rel in INCLUDE_PATHS:
+            path = REPO_ROOT / rel
+            if path.is_file():
+                tar.add(path, arcname=rel)
+                continue
+            for root, dirs, files in os.walk(path):
+                root_path = Path(root)
+                root_rel = root_path.relative_to(REPO_ROOT)
+                dirs[:] = [d for d in dirs if (root_rel / d) not in EXCLUDE_DIRS]
+                for fname in files:
+                    fpath = root_path / fname
+                    tar.add(fpath, arcname=str(fpath.relative_to(REPO_ROOT)))
+    return buf.getvalue()
 
 
 def run(cmd, **kwargs):
@@ -50,22 +79,32 @@ def run(cmd, **kwargs):
     return result
 
 
+STAGING_DIR = f"{REMOTE_DIR}/.deploy_staging"
+
+
 def ship_code(ssh_host: str, dry_run: bool) -> None:
     print("-- Packaging and transferring code --")
-    tar_cmd = ["tar", "-czf", "-", *EXCLUDES, *INCLUDE_PATHS]
-    extract_cmd = ["ssh", "-o", "BatchMode=yes", ssh_host, f"tar -xzf - -C {REMOTE_DIR}"]
+    # Extract into a clean staging dir, then `cp` over the live tree, so a
+    # stray leftover file from a previous run can never conflict with
+    # extraction, and node_modules (untracked, not in the archive) is never
+    # touched.
+    prep_cmd = ["ssh", "-o", "BatchMode=yes", ssh_host, f"rm -rf {STAGING_DIR} && mkdir -p {STAGING_DIR}"]
+    extract_cmd = ["ssh", "-o", "BatchMode=yes", ssh_host, f"tar -xzf - -C {STAGING_DIR}"]
+    promote_cmd = ["ssh", "-o", "BatchMode=yes", ssh_host, f"cp -a {STAGING_DIR}/. {REMOTE_DIR}/ && rm -rf {STAGING_DIR}"]
 
     if dry_run:
-        print(f"[dry-run] would run: {' '.join(tar_cmd)} | {' '.join(extract_cmd)}")
+        print(f"[dry-run] would run: {' '.join(prep_cmd)}")
+        print(f"[dry-run] would build tarball in-process (Python tarfile) and pipe to: {' '.join(extract_cmd)}")
+        print(f"[dry-run] would run: {' '.join(promote_cmd)}")
         return
 
-    tar_proc = subprocess.Popen(tar_cmd, cwd=REPO_ROOT, stdout=subprocess.PIPE)
-    ssh_proc = subprocess.run(extract_cmd, stdin=tar_proc.stdout)
-    tar_proc.stdout.close()
-    tar_proc.wait()
-    if tar_proc.returncode != 0 or ssh_proc.returncode != 0:
+    run(prep_cmd)
+    payload = build_tar_bytes()
+    ssh_proc = subprocess.run(extract_cmd, input=payload)
+    if ssh_proc.returncode != 0:
         print("Transfer failed", file=sys.stderr)
         sys.exit(1)
+    run(promote_cmd)
 
 
 def sync_creds(ssh_host: str, dry_run: bool) -> None:

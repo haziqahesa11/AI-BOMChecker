@@ -10,10 +10,23 @@ import TpgCheckPage from './components/TpgCheckPage'
 import CrdTrackerPage from './components/CrdTrackerPage'
 
 const PAGES = [
-  { id: 'bom',         label: 'BOM Compare' },
-  { id: 'mo',          label: 'MO Lookup' },
-  { id: 'tpg-check',   label: 'TPG Check' },
-  { id: 'crd-tracker', label: 'CRD Tracker' },
+  {
+    id: 'test',
+    label: 'Test',
+    children: [
+      { id: 'tpg-check', label: 'TPG Check' },
+      { id: 'mo',         label: 'Create BOM' },
+    ],
+  },
+  {
+    id: 'npi',
+    label: 'NPI',
+    children: [
+      { id: 'crd-tracker', label: 'CRD Tracker' },
+      { id: 'npi-library', label: 'NPI Library', disabled: true, note: 'Under development' },
+    ],
+  },
+  { id: 'bom', label: 'BOM Compare' },
 ]
 
 export default function App() {
