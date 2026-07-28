@@ -1,0 +1,28 @@
+.update-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: .55rem 1rem;
+  background: var(--warn-bg);
+  color: var(--warn-fg);
+  border-bottom: 1px solid var(--warn-border);
+  font-size: .85rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.update-banner button {
+  padding: .3rem .8rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--warn-border);
+  background: transparent;
+  color: var(--warn-fg);
+  font-size: .8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.update-banner button:hover {
+  background: var(--warn-border);
+}

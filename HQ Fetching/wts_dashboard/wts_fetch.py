@@ -22,6 +22,7 @@ import json
 import base64
 import requests
 from datetime import datetime
+from pathlib import Path
 from dateutil import parser
 
 # ---------------------------------------------------------------------------
@@ -32,16 +33,34 @@ KEYWORDS = ["CRD_", "SKU_", "CRD ", "SKU ", "FRU_", "FRU "]
 PROJECT_LIST_FILE = "Project_List.cfg"
 DAYS_BACK = 10  # work items changed within this many days (was @Today - 10)
 
-# --- Personal Access Token --------------------------------------------------
-# SECURITY: the PAT below is your credential. Because it now lives in a file you
-# may share, prefer supplying it via an environment variable instead:
-#     export AZURE_DEVOPS_PAT="your-token"        (macOS/Linux)
-#     setx  AZURE_DEVOPS_PAT "your-token"         (Windows)
-# The hardcoded fallback still works, but consider rotating this token and
-# moving it out of source control.
-PAT = os.environ.get("AZURE_DEVOPS_PAT", "").strip()
-if not PAT:
-    PAT = "28RfTWXl8wlWeDsot9ig2CXpNwRR0URo4rYrZtPW3erm3hJ4EqUcJQQJ99CGACAAAAAsNR9sAAASAZDOseY9"  # Expires 2027/7/23 — move to env var
+# --- Credentials / data directory -------------------------------------------
+# Read from config/credentials/wts.env (this repo's standard per-system
+# credentials file, gitignored — see config/credentials/README.md), with a
+# real environment variable taking priority if one is already set. No PAT
+# is hardcoded here anymore; run_fetch() raises a clear error if none is
+# configured, rather than silently building a request that will 401.
+_CREDENTIALS_PATH = Path(__file__).resolve().parents[2] / "config" / "credentials" / "wts.env"
+
+def _parse_env_file(path: Path) -> dict:
+    values = {}
+    if not path.exists():
+        return values
+    for raw_line in path.read_text(encoding="utf-8-sig").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        values[key.strip()] = value.strip()
+    return values
+
+_env_file = _parse_env_file(_CREDENTIALS_PATH)
+
+PAT = os.environ.get("AZURE_DEVOPS_PAT", "").strip() or _env_file.get("AZURE_DEVOPS_PAT", "").strip()
+
+# Absolute directory where WTS/ (attachments + index.json) and Log/ get
+# written. If unset, falls back to today's behaviour (cwd-relative WTS/Log),
+# so the script still runs standalone without any config.
+WTS_DATA_DIR = os.environ.get("WTS_DATA_DIR", "").strip() or _env_file.get("WTS_DATA_DIR", "").strip()
 
 # ---------------------------------------------------------------------------
 # Parsing: model / sequence / revision
@@ -103,8 +122,14 @@ def detect_keyword(title: str):
 # Folders + logging
 # ---------------------------------------------------------------------------
 TIMESTAMP = datetime.now().strftime("%Y-%m-%d")
-LOG_DIR = "Log"
-WTS_DIR = "WTS"
+if WTS_DATA_DIR:
+    LOG_DIR = os.path.join(WTS_DATA_DIR, "Log")
+    WTS_DIR = os.path.join(WTS_DATA_DIR, "WTS")
+else:
+    print("WTS_DATA_DIR is not set (config/credentials/wts.env) — "
+          "writing WTS/ and Log/ relative to the current directory instead.")
+    LOG_DIR = "Log"
+    WTS_DIR = "WTS"
 INDEX_PATH = os.path.join(WTS_DIR, "index.json")
 os.makedirs(LOG_DIR, exist_ok=True)
 os.makedirs(WTS_DIR, exist_ok=True)
@@ -238,6 +263,11 @@ def load_projects():
 
 def run_fetch():
     """Fetch everything, write WTS/index.json, and return the list of records."""
+    if not PAT:
+        raise RuntimeError(
+            "AZURE_DEVOPS_PAT is not set. Add it to config/credentials/wts.env "
+            "(copy wts.env.example) or set the AZURE_DEVOPS_PAT environment variable."
+        )
     all_records = []
     for proj in load_projects():
         all_records.extend(process_project(proj))

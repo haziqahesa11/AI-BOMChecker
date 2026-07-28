@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Header from './components/Header'
+import UpdateBanner from './components/UpdateBanner'
 import SearchBar from './components/SearchBar'
 import StateBox from './components/StateBox'
 import ResultsArea from './components/ResultsArea'
@@ -8,6 +9,8 @@ import RowDetailModal from './components/RowDetailModal'
 import MoLookupPage from './components/MoLookupPage'
 import TpgCheckPage from './components/TpgCheckPage'
 import CrdTrackerPage from './components/CrdTrackerPage'
+import MsftProjectsPage from './components/MsftProjectsPage'
+import NpiLibraryPage from './components/NpiLibraryPage'
 
 const PAGES = [
   {
@@ -23,9 +26,10 @@ const PAGES = [
     label: 'NPI',
     children: [
       { id: 'crd-tracker', label: 'CRD Tracker' },
-      { id: 'npi-library', label: 'NPI Library', disabled: true, note: 'Under development' },
+      { id: 'npi-library', label: 'NPI Library' },
     ],
   },
+  { id: 'msft-projects', label: 'MSFT Projects' },
   { id: 'bom', label: 'BOM Compare' },
 ]
 
@@ -72,6 +76,7 @@ export default function App() {
 
   return (
     <>
+      <UpdateBanner />
       <Header pages={PAGES} activePage={activePage} onNavigate={setActivePage} />
 
       {activePage === 'mo' && <MoLookupPage onProceedToCompare={proceedToCompare} />}
@@ -79,6 +84,10 @@ export default function App() {
       {activePage === 'tpg-check' && <TpgCheckPage />}
 
       {activePage === 'crd-tracker' && <CrdTrackerPage />}
+
+      {activePage === 'msft-projects' && <MsftProjectsPage />}
+
+      {activePage === 'npi-library' && <NpiLibraryPage />}
 
       {activePage === 'bom' && (
         <>

@@ -24,7 +24,7 @@ import streamlit as st
 
 import wts_fetch  # reuse the fetch layer
 
-INDEX_PATH = os.path.join("WTS", "index.json")
+INDEX_PATH = wts_fetch.INDEX_PATH  # stay in sync with wts_fetch's WTS_DATA_DIR resolution
 DASH = "—"  # shown when a value could not be parsed
 
 st.set_page_config(page_title="WTS Tracking Dashboard", page_icon="📦", layout="wide")

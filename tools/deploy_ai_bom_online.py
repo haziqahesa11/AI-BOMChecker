@@ -41,6 +41,11 @@ EXCLUDE_DIRS = [
     Path("Frontend") / "dist",
 ]
 INCLUDE_PATHS = ["BackEnd", "Frontend", "package.json"]
+# wts.env / npi.env are deliberately NOT in CRED_FILES: their values pair a
+# credential with a host-specific absolute path (Windows locally, Linux on
+# the server). A blind scp would silently overwrite the server's correct
+# WTS_DATA_DIR/NPI_DATA_DIR with a local Windows path. Those two files are
+# hand-created once directly on the server instead (see deploy runbook).
 CRED_FILES = ["sql.env", "automation.env"]
 
 

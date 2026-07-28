@@ -2,9 +2,13 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const { sql, query, annonPool, annonWritePool } = require('./DB');
-const { fetchMoItem } = require('./services/moApiClient');
+const { fetchMoItem, parseMoItems } = require('./services/moApiClient');
+const wtsService = require('./services/wtsService');
+const npiLibraryService = require('./services/npiLibraryService');
 
 require('dotenv').config({ path: path.join(__dirname, '..', 'config', 'credentials', 'automation.env') });
+require('dotenv').config({ path: path.join(__dirname, '..', 'config', 'credentials', 'wts.env') });
+require('dotenv').config({ path: path.join(__dirname, '..', 'config', 'credentials', 'npi.env') });
 
 const app = express();
 app.use(express.json());
@@ -15,6 +19,25 @@ const clientDist = path.join(__dirname, '..', 'Frontend', 'dist');
 if (fs.existsSync(clientDist)) {
   app.use(express.static(clientDist));
 }
+
+// Build fingerprint for the "new version available" client banner: reuse the
+// content hash Vite already bakes into the JS bundle filename, so the value
+// changes exactly when the frontend bundle changes and needs no separate
+// version-stamping step in any deploy script. Computed once at startup since
+// a deploy always restarts this process (pm2 restart) before serving traffic.
+function computeBuildId() {
+  try {
+    const html = fs.readFileSync(path.join(clientDist, 'index.html'), 'utf8');
+    const match = html.match(/\/assets\/index-([A-Za-z0-9_-]+)\.js/);
+    if (match) return match[1];
+  } catch (err) {
+    // dist/index.html missing (dev-without-build) — fall through to fallback
+  }
+  return String(Date.now());
+}
+const BUILD_ID = computeBuildId();
+
+app.get('/api/version', (req, res) => res.json({ buildId: BUILD_ID }));
 
 // Pattern for CRD spec part numbers: e.g. M1389927-001
 const CRD_PN_PATTERN = /^[A-Z]\d{7}-\d{3}$/;
@@ -157,7 +180,8 @@ app.post('/api/mo-lookup', async (req, res) => {
       moNumber: moNumber.trim(),
       moCategory: moCategory || null,
       requestParams: params,
-      rawResponse: xml
+      rawResponse: xml,
+      moItems: parseMoItems(xml)
     };
 
     if (partNumber?.trim()) {
@@ -299,7 +323,11 @@ app.get('/api/crd-tracker/lines/:lineId/history', async (req, res) => {
   if (lineId < 0) {
     const testRow = crdTestLines.get(-lineId);
     if (!testRow) return res.status(404).json({ error: `Test line ${-lineId} not found.` });
-    return res.json({ lineId, history: testRow.testHistory || [] });
+    // Latest work-week first, matching the real-line query below.
+    const history = [...(testRow.testHistory || [])].sort((a, b) =>
+      b.isoYear - a.isoYear || b.workWeek - a.workWeek
+    );
+    return res.json({ lineId, history });
   }
   try {
     const result = await annonPool.query(
@@ -311,7 +339,7 @@ app.get('/api/crd-tracker/lines/:lineId/history', async (req, res) => {
          crd_code
        FROM tracking.crdbom_week_status
        WHERE line_id = $1
-       ORDER BY iso_year ASC, work_week ASC`,
+       ORDER BY iso_year DESC, work_week DESC`,
       [lineId]
     );
     res.json({
@@ -381,20 +409,42 @@ const crdTestLines = new Map(); // testId (number) -> row shaped like a /lines r
 let nextCrdTestLineId = 1;
 
 // Shared validation for the New SKU form, used by both the real and test
-// creation endpoints below.
+// creation endpoints below. "No" is no longer user-supplied — it's assigned
+// by computeNewLineNo() below, based on Gen.
 function validateNewSkuBody(body) {
-  const { no, l11Msf, l11Sku, l10Msf, l10Sku } = body;
-  if (!Number.isInteger(no) || no <= 0) return 'No must be a positive integer.';
+  const { l11Msf, l11Sku, l10Msf, l10Sku } = body;
   if (!l11Msf?.trim() || !l11Sku?.trim() || !l10Msf?.trim() || !l10Sku?.trim())
     return 'L11 MSF, L11 SKU, L10 MSF, and L10 SKU are required.';
   return null;
 }
 
+// Assigns the "No" for a new line from its Gen, instead of the caller
+// picking a number: it's slotted right after the last existing line whose
+// Gen is <= the new one (so it lands inside that Gen's block), rather than
+// always being appended to the very bottom of the whole table. A blank/new
+// Gen with nothing <= it (or no Gen at all) naturally falls after everything,
+// i.e. the bottom — same as before, just derived instead of typed.
+function computeNewLineNo(existing, gen) {
+  const sorted = [...existing].sort((a, b) => a.no - b.no);
+  if (gen === null || gen === undefined) {
+    return sorted.length ? sorted[sorted.length - 1].no + 1 : 1;
+  }
+  let insertAfter = 0;
+  for (const l of sorted) {
+    if (l.gen !== null && l.gen !== undefined && Number(l.gen) <= gen) {
+      insertAfter = l.no;
+    }
+  }
+  return insertAfter + 1;
+}
+
 // ── API: CRD Tracker — create a new tracked line + L10 component (real) ────
 app.post('/api/crd-tracker/lines', async (req, res) => {
-  const { no, gen, l11Msf, l11Sku, crdNumber, l10Msf, l10Sku, wtsTicket, wtsLink, latestCrd } = req.body;
+  const { gen, l11Msf, l11Sku, crdNumber, l10Msf, l10Sku, wtsTicket, wtsLink, latestCrd } = req.body;
   const validationError = validateNewSkuBody(req.body);
   if (validationError) return res.status(400).json({ error: validationError });
+
+  const genValue = (gen === null || gen === undefined || gen === '') ? null : Number(gen);
 
   let crdCode = null;
   if (latestCrd?.trim()) {
@@ -408,10 +458,27 @@ app.post('/api/crd-tracker/lines', async (req, res) => {
   const client = await annonWritePool.connect();
   try {
     await client.query('BEGIN');
+    // Locks every existing line for the duration of the transaction so a
+    // concurrent New SKU submit can't compute the same slot before this one
+    // commits its renumbering.
+    const existingResult = await client.query(
+      'SELECT line_no, gen FROM tracking.crdbom_line ORDER BY line_no FOR UPDATE'
+    );
+    const no = computeNewLineNo(
+      existingResult.rows.map(r => ({ no: r.line_no, gen: r.gen })),
+      genValue
+    );
+    if (existingResult.rows.some(r => r.line_no >= no)) {
+      // Two-phase shift avoids transiently colliding with the (non-deferrable)
+      // UNIQUE constraint on line_no: negate the block first (guaranteed free
+      // range), then convert each negative back to old+1.
+      await client.query('UPDATE tracking.crdbom_line SET line_no = -line_no WHERE line_no >= $1', [no]);
+      await client.query('UPDATE tracking.crdbom_line SET line_no = -line_no + 1 WHERE line_no < 0');
+    }
     const lineResult = await client.query(
       `INSERT INTO tracking.crdbom_line (line_no, gen, l11_msf, l11_sku, crd_number, wts_ticket, wts_link)
        VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
-      [no, gen ?? null, l11Msf.trim(), l11Sku.trim(), crdNumber?.trim() || null, wtsTicket?.trim() || null, wtsLink?.trim() || null]
+      [no, genValue, l11Msf.trim(), l11Sku.trim(), crdNumber?.trim() || null, wtsTicket?.trim() || null, wtsLink?.trim() || null]
     );
     const lineId = lineResult.rows[0].id;
     const compResult = await client.query(
@@ -420,10 +487,9 @@ app.post('/api/crd-tracker/lines', async (req, res) => {
       [lineId, l10Msf.trim(), l10Sku.trim(), crdCode]
     );
     await client.query('COMMIT');
-    res.json({ ok: true, lineId, componentId: compResult.rows[0].id });
+    res.json({ ok: true, lineId, componentId: compResult.rows[0].id, no });
   } catch (err) {
     await client.query('ROLLBACK');
-    if (err.code === '23505') return res.status(409).json({ error: `Line No ${no} already exists.` });
     console.error(err);
     res.status(500).json({ error: err.message });
   } finally {
@@ -433,9 +499,11 @@ app.post('/api/crd-tracker/lines', async (req, res) => {
 
 // ── API: CRD Tracker — create a Test-only line (never touches Postgres) ────
 app.post('/api/crd-tracker/test-lines', async (req, res) => {
-  const { no, gen, l11Msf, l11Sku, crdNumber, l10Msf, l10Sku, wtsTicket, wtsLink, latestCrd } = req.body;
+  const { gen, l11Msf, l11Sku, crdNumber, l10Msf, l10Sku, wtsTicket, wtsLink, latestCrd } = req.body;
   const validationError = validateNewSkuBody(req.body);
   if (validationError) return res.status(400).json({ error: validationError });
+
+  const genValue = (gen === null || gen === undefined || gen === '') ? null : Number(gen);
 
   let crdCode = null;
   if (latestCrd?.trim()) {
@@ -446,6 +514,25 @@ app.post('/api/crd-tracker/test-lines', async (req, res) => {
     }
   }
 
+  // Slot the test row against the same Gen ordering as real lines (read-only
+  // lookup — this endpoint never writes to Postgres) plus any other test
+  // rows already in memory, then bump other test rows' "no" out of the way.
+  // Real lines are never renumbered here, so a test row can transiently
+  // share a "no" with a real line; it's always badged TEST in the table.
+  let existing = [];
+  try {
+    const r = await annonPool.query('SELECT line_no, gen FROM tracking.crdbom_line');
+    existing = r.rows.map(row => ({ no: row.line_no, gen: row.gen }));
+  } catch (err) {
+    console.warn('Could not read real lines for test-row placement, using test rows only:', err.message);
+  }
+  for (const t of crdTestLines.values()) existing.push({ no: t.no, gen: t.gen });
+
+  const no = computeNewLineNo(existing, genValue);
+  for (const t of crdTestLines.values()) {
+    if (t.no >= no) t.no += 1;
+  }
+
   const testId = nextCrdTestLineId++;
   const syntheticId = -testId;
   const row = {
@@ -453,7 +540,7 @@ app.post('/api/crd-tracker/test-lines', async (req, res) => {
     componentId: syntheticId,
     testId,
     no,
-    gen: gen ?? null,
+    gen: genValue,
     l11Msf: l11Msf.trim(),
     l11Sku: l11Sku.trim(),
     crdNumber: crdNumber?.trim() || null,
@@ -471,7 +558,7 @@ app.post('/api/crd-tracker/test-lines', async (req, res) => {
     testHistory: [], // populated by WW Rev Update; local-only weekly history
   };
   crdTestLines.set(testId, row);
-  res.json({ ok: true, testId });
+  res.json({ ok: true, testId, no });
 });
 
 // Reads the current ISO year/work-week from Postgres (matches EXTRACT() used
@@ -2019,6 +2106,127 @@ function levenshtein(a, b) {
       dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j-1], dp[i-1][j], dp[i][j-1]);
   return dp[m][n];
 }
+
+// ── API: MSFT Projects / WTS — read-only index + spreadsheet viewer ────────
+// Data comes from HQ Fetching/wts_dashboard/wts_fetch.py, run separately
+// (manually or scheduled) against WTS_DATA_DIR — these routes never trigger
+// a fetch themselves, only read whatever's already on disk there.
+app.get('/api/wts/index', (req, res) => {
+  try {
+    const { dataDirConfigured, indexExists, lastFetchedAt, items } = wtsService.loadIndex();
+    res.json({ dataDirConfigured, indexExists, lastFetchedAt, itemCount: items.length, items });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/wts/files/:fileName/sheets', (req, res) => {
+  try {
+    const absPath = wtsService.resolveWtsFile(req.params.fileName);
+    res.json({ sheetNames: wtsService.listSheetNames(absPath) });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
+app.get('/api/wts/files/:fileName/sheet', (req, res) => {
+  const sheetName = req.query.name;
+  if (!sheetName) {
+    return res.status(400).json({ error: 'Query param "name" (sheet name) is required.' });
+  }
+  try {
+    const absPath = wtsService.resolveWtsFile(req.params.fileName);
+    res.json(wtsService.readSheet(absPath, String(sheetName)));
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
+app.get('/api/wts/files/:fileName/download', (req, res) => {
+  try {
+    const absPath = wtsService.resolveWtsFile(req.params.fileName);
+    res.download(absPath, req.params.fileName);
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
+// ── API: NPI Library — read-only index + spreadsheet viewer ────────────────
+// Data comes from BackEnd/scripts/build-npi-index.js, run manually against
+// NPI_DATA_DIR — these routes never rebuild the index themselves, only read
+// whatever's already on disk at <NPI_DATA_DIR>/MSF/NpiLibrary/index.json.
+app.get('/api/npi/index', (req, res) => {
+  try {
+    const { dataDirConfigured, indexExists, generatedAt, skus, crossTables } = npiLibraryService.loadIndex();
+    res.json({ dataDirConfigured, indexExists, generatedAt, itemCount: skus.length, items: skus, crossTables });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/npi/skus/:itemNumber/:revision/sheets', (req, res) => {
+  try {
+    const absPath = npiLibraryService.resolveSkuFile(req.params.itemNumber, req.params.revision);
+    res.json({ sheetNames: npiLibraryService.listSheetNames(absPath) });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
+app.get('/api/npi/skus/:itemNumber/:revision/sheet', (req, res) => {
+  const sheetName = req.query.name;
+  if (!sheetName) {
+    return res.status(400).json({ error: 'Query param "name" (sheet name) is required.' });
+  }
+  try {
+    const absPath = npiLibraryService.resolveSkuFile(req.params.itemNumber, req.params.revision);
+    res.json(npiLibraryService.readSheet(absPath, String(sheetName)));
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
+app.get('/api/npi/skus/:itemNumber/:revision/download', (req, res) => {
+  try {
+    const absPath = npiLibraryService.resolveSkuFile(req.params.itemNumber, req.params.revision);
+    res.download(absPath, path.basename(absPath));
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
+app.get('/api/npi/cross-tables/:gen/:fileName/sheets', (req, res) => {
+  try {
+    const absPath = npiLibraryService.resolveCrossTableFile(req.params.gen, req.params.fileName);
+    res.json({ sheetNames: npiLibraryService.listSheetNames(absPath) });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
+app.get('/api/npi/cross-tables/:gen/:fileName/sheet', (req, res) => {
+  const sheetName = req.query.name;
+  if (!sheetName) {
+    return res.status(400).json({ error: 'Query param "name" (sheet name) is required.' });
+  }
+  try {
+    const absPath = npiLibraryService.resolveCrossTableFile(req.params.gen, req.params.fileName);
+    res.json(npiLibraryService.readSheet(absPath, String(sheetName)));
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
+app.get('/api/npi/cross-tables/:gen/:fileName/download', (req, res) => {
+  try {
+    const absPath = npiLibraryService.resolveCrossTableFile(req.params.gen, req.params.fileName);
+    res.download(absPath, path.basename(absPath));
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
 
 // ── SPA fallback (serves index.html for any non-API route in production) ───
 if (fs.existsSync(clientDist)) {

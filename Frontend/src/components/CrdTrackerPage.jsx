@@ -462,9 +462,15 @@ export default function CrdTrackerPage() {
                                           <tr><th>Week</th><th>Week Start</th><th>CRD Code</th></tr>
                                         </thead>
                                         <tbody>
-                                          {hist.history.map(h => (
-                                            <tr key={h.weekLabel}>
-                                              <td>{h.weekLabel}</td>
+                                          {hist.history.map((h, i) => (
+                                            <tr
+                                              key={`${h.isoYear}-${h.workWeek}`}
+                                              className={i === 0 ? 'crd-week-latest' : undefined}
+                                            >
+                                              <td>
+                                                {h.weekLabel}
+                                                {i === 0 && <span className="crd-latest-badge">LATEST</span>}
+                                              </td>
                                               <td>{h.weekStartDate || '—'}</td>
                                               <td className="mono">{h.crdCode}</td>
                                             </tr>

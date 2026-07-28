@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import MoLookupForm from './MoLookupForm'
 import PartDetailTabs from './PartDetailTabs'
 import SearchableSelect from './SearchableSelect'
+import MoItemsPanel from './MoItemsPanel'
 
 export default function MoLookupPage({ onProceedToCompare }) {
   const [result, setResult]               = useState(null)
@@ -191,7 +192,7 @@ export default function MoLookupPage({ onProceedToCompare }) {
               {result.qvl && (
                 <div className={`state-box ${result.qvl.inQVL ? '' : 'error'}`} style={{ marginBottom: '1rem' }}>
                   <div className="icon">{result.qvl.inQVL ? '✅' : '❌'}</div>
-                  <h3>{result.qvl.inQVL ? 'Part Number found in QVL' : 'Part Number NOT in QVL'}</h3>
+                  <h3>{result.qvl.inQVL ? 'Part Number found in QVL' : 'This Part Number is NOT encoded in QVL'}</h3>
                   <p>
                     {result.qvl.modelRef} / {result.qvl.location} — {result.qvl.partNumber}
                   </p>
@@ -200,7 +201,7 @@ export default function MoLookupPage({ onProceedToCompare }) {
                   {result.qvl.bomExists ? (
                     <p>✅ BOM already exists for this part number — proceeding to Comparison check…</p>
                   ) : (
-                    <p>⚠️ No BOM yet for this part number. Send to MonicaTPGenerator below, then re-run Lookup to proceed to Comparison.</p>
+                    <p>⚠️ No BOM are generated for this part number. Send to MonicaTPGenerator below, then re-run Lookup to proceed to Comparison.</p>
                   )}
                   <div style={{ marginTop: '0.75rem' }}>
                     {!sendStatus && !testBomStatus && (
@@ -257,10 +258,13 @@ export default function MoLookupPage({ onProceedToCompare }) {
                   {!partDetailLoading && <PartDetailTabs partDetail={partDetail} />}
                 </>
               )}
-              <h3>Request sent to MO API</h3>
-              <pre className="mo-result-pre">{JSON.stringify(result.requestParams, null, 2)}</pre>
-              <h3>Raw response</h3>
-              <pre className="mo-result-pre">{result.rawResponse}</pre>
+              <MoItemsPanel
+                moItems={result.moItems}
+                moNumber={result.moNumber}
+                moCategory={result.moCategory}
+                requestParams={result.requestParams}
+                rawResponse={result.rawResponse}
+              />
             </div>
           )}
         </main>

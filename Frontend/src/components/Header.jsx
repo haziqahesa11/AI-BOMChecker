@@ -163,7 +163,7 @@ export default function Header({ pages, activePage, onNavigate }) {
                   <span className="eyebrow">Bill of Material Integrity</span>
                   <h1>
                     <span className="metal">Every part accounted for.</span>
-                    <span className="line2 metal">Every revision defended.</span>
+                    <span className="line2 metal">Every revision defedfgnded.</span>
                   </h1>
                   <p className="lede">
                     BOMGUARD validates, version-locks, and audits your bills of material —
@@ -171,7 +171,7 @@ export default function Header({ pages, activePage, onNavigate }) {
                     reaches the production floor.
                   </p>
                   <div className="hero-actions">
-                    <a className="btn btn-gold" href="#" onClick={selectPage('bom')}>MSFT Projects</a>
+                    <a className="btn btn-gold" href="#" onClick={selectPage('msft-projects')}>MSFT Projects</a>
                     <a className="btn btn-ghost" href="#" onClick={selectPage('bom')}>See how it works &nbsp;→</a>
                   </div>
                   <div className="trust">

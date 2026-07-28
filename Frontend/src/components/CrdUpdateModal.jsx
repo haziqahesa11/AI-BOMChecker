@@ -93,7 +93,6 @@ function NewSkuModeStep({ onPick }) {
 // ── New SKU form (Test or Real) ─────────────────────────────────────────────
 function NewSkuForm({ mode, rows, revisionCodes, onSaved, onClose }) {
   const [fields, setFields] = useState(() => ({
-    no: rows.length ? String(Math.max(...rows.map(r => r.no)) + 1) : '1',
     gen: '',
     l11Msf: '',
     l11Sku: '',
@@ -106,6 +105,8 @@ function NewSkuForm({ mode, rows, revisionCodes, onSaved, onClose }) {
   }))
   const [status, setStatus] = useState('idle') // idle | submitting | success | error
   const [error, setError] = useState(null)
+  // "No" is assigned by the backend from Gen — filled in once the save responds.
+  const [assignedNo, setAssignedNo] = useState(null)
 
   const opts = useMemo(() => ({
     l11Msf: uniqSorted(rows.map(r => r.l11Msf)),
@@ -126,8 +127,6 @@ function NewSkuForm({ mode, rows, revisionCodes, onSaved, onClose }) {
   }
 
   function validate() {
-    const no = Number(fields.no)
-    if (!Number.isInteger(no) || no <= 0) return 'No must be a positive integer.'
     if (!fields.l11Msf.trim() || !fields.l11Sku.trim() || !fields.l10Msf.trim() || !fields.l10Sku.trim())
       return 'L11 MSF, L11 SKU, L10 MSF, and L10 SKU are required.'
     return null
@@ -144,7 +143,6 @@ function NewSkuForm({ mode, rows, revisionCodes, onSaved, onClose }) {
     setStatus('submitting')
     setError(null)
     const body = {
-      no: Number(fields.no),
       gen: fields.gen.trim() ? Number(fields.gen) : null,
       l11Msf: fields.l11Msf.trim(),
       l11Sku: fields.l11Sku.trim(),
@@ -157,7 +155,8 @@ function NewSkuForm({ mode, rows, revisionCodes, onSaved, onClose }) {
     }
     try {
       const url = mode === 'test' ? '/api/crd-tracker/test-lines' : '/api/crd-tracker/lines'
-      await postJson(url, body)
+      const result = await postJson(url, body)
+      setAssignedNo(result.no)
       setStatus('success')
     } catch (err) {
       setStatus('error')
@@ -171,8 +170,8 @@ function NewSkuForm({ mode, rows, revisionCodes, onSaved, onClose }) {
         status={status}
         error={error}
         successText={mode === 'test'
-          ? `No ${fields.no} saved locally as a test row.`
-          : `No ${fields.no} saved to the CRD tracker database.`}
+          ? `No ${assignedNo} saved locally as a test row.`
+          : `No ${assignedNo} saved to the CRD tracker database.`}
         onDone={() => { onSaved(); onClose() }}
       />
     )
@@ -185,12 +184,10 @@ function NewSkuForm({ mode, rows, revisionCodes, onSaved, onClose }) {
           <p>⚠️ {error}</p>
         </div>
       )}
+      <p className="hint" style={{ marginBottom: '.75rem' }}>
+        No is assigned automatically, slotted in next to other lines with the same Gen.
+      </p>
       <div className="modal-fields">
-        <div className="modal-form-field">
-          <label>No *</label>
-          <input className="pn-input" type="number" min="1" value={fields.no}
-            onChange={e => setField('no', e.target.value)} required />
-        </div>
         <div className="modal-form-field">
           <label>Gen</label>
           <input className="pn-input" type="number" step="0.1" value={fields.gen}

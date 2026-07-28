@@ -63,4 +63,53 @@ async function fetchMoItem(moNumber) {
   return { params, xml: xmlText };
 }
 
-module.exports = { buildMoLookupParams, fetchMoItem, getOperationUrl };
+function decodeXmlEntities(str) {
+  return str
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&');
+}
+
+function readTag(block, tag) {
+  const m = block.match(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`));
+  return m ? decodeXmlEntities(m[1].trim()) : '';
+}
+
+// Parses the flat <Table><MO/><UPN/><CPN/><DESCRIPTION/><QUANTITY/></Table>
+// rows out of the GETMOITEM diffgram (schema confirmed 2026-07-25 from live
+// L10/L11 samples). The service returns each component as two byte-identical
+// rows — an upstream duplication, not something this app introduces — so
+// rows are collapsed here to one per distinct (UPN, CPN, Description,
+// Quantity), keeping an `occurrences` count rather than silently dropping
+// the duplicate so nothing in the raw response is hidden.
+function parseMoItems(xml) {
+  const blocks = xml.match(/<Table\b[^>]*>[\s\S]*?<\/Table>/g) || [];
+  const rows = blocks.map(block => ({
+    mo: readTag(block, 'MO'),
+    upn: readTag(block, 'UPN'),
+    cpn: readTag(block, 'CPN'),
+    description: readTag(block, 'DESCRIPTION'),
+    quantity: parseFloat(readTag(block, 'QUANTITY')) || 0,
+  }));
+
+  const byKey = new Map();
+  for (const row of rows) {
+    const key = `${row.upn}|${row.cpn}|${row.description}|${row.quantity}`;
+    const existing = byKey.get(key);
+    if (existing) {
+      existing.occurrences += 1;
+    } else {
+      byKey.set(key, { ...row, occurrences: 1 });
+    }
+  }
+
+  return {
+    upn: rows[0]?.upn || null,
+    rawRowCount: rows.length,
+    rows: [...byKey.values()],
+  };
+}
+
+module.exports = { buildMoLookupParams, fetchMoItem, getOperationUrl, parseMoItems };
