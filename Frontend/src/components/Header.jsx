@@ -163,7 +163,7 @@ export default function Header({ pages, activePage, onNavigate }) {
                   <span className="eyebrow">Bill of Material Integrity</span>
                   <h1>
                     <span className="metal">Every part accounted for.</span>
-                    <span className="line2 metal">Every revision defedfgnded.</span>
+                    <span className="line2 metal">Every revision deffended.</span>
                   </h1>
                   <p className="lede">
                     BOMGUARD validates, version-locks, and audits your bills of material —

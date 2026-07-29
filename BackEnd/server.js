@@ -5,6 +5,10 @@ const { sql, query, annonPool, annonWritePool } = require('./DB');
 const { fetchMoItem, parseMoItems } = require('./services/moApiClient');
 const wtsService = require('./services/wtsService');
 const npiLibraryService = require('./services/npiLibraryService');
+const { fetchAllModels, fetchQvlList } = require('./services/qvlService');
+const { findCrdRefRow, buildPartDetail } = require('./services/partDetailService');
+const goldenTemplateService = require('./services/goldenTemplateService');
+const { fetchReviewHistory } = require('./services/tpaHistoryService');
 
 require('dotenv').config({ path: path.join(__dirname, '..', 'config', 'credentials', 'automation.env') });
 require('dotenv').config({ path: path.join(__dirname, '..', 'config', 'credentials', 'wts.env') });
@@ -38,21 +42,6 @@ function computeBuildId() {
 const BUILD_ID = computeBuildId();
 
 app.get('/api/version', (req, res) => res.json({ buildId: BUILD_ID }));
-
-// Pattern for CRD spec part numbers: e.g. M1389927-001
-const CRD_PN_PATTERN = /^[A-Z]\d{7}-\d{3}$/;
-
-// Identify the CRD reference row inside a SysBom row set.
-//   Criteria: ChildPartNumber matches M1234567-001 pattern, or Location/Type = 'CRD'
-// Shared by /api/compare and /api/part-detail — both derive the same
-// CRDspec/FRUspec lookup key (SpecNumber) from this one row.
-function findCrdRefRow(bomRows) {
-  return bomRows.find(r =>
-    CRD_PN_PATTERN.test((r.ChildPartNumber || '').trim()) ||
-    (r.Location || '').toUpperCase() === 'CRD' ||
-    (r.Type || '').toUpperCase() === 'CRD'
-  );
-}
 
 // ── API: compare BOM vs CRD ────────────────────────────────────────────────
 app.post('/api/compare', async (req, res) => {
@@ -153,20 +142,6 @@ const MO_CATEGORY_TO_QVL = {
   L11: { modelRef: 'C2012_L11', location: 'L11' },
 };
 
-// Read-only: SP_QVL_Query_DESC(ModelRef, Location) → [{ModelRef, Location, PartNumber, Description}].
-// Shared by /api/mo-lookup (fixed L10/L11 models) and /api/qvl-list (any model
-// from /api/models) — same query, just not hardcoded to one model reference.
-async function fetchQvlList(modelRef, location) {
-  const qvlResult = await query(
-    'EXEC BOM.dbo.SP_QVL_Query_DESC @ModelRef = @modelRef, @Location = @location',
-    [
-      { name: 'modelRef', type: sql.NVarChar, value: modelRef },
-      { name: 'location', type: sql.NVarChar, value: location }
-    ]
-  );
-  return qvlResult.recordset;
-}
-
 // ── API: MO lookup + QVL check ──────────────────────────────────────────────
 app.post('/api/mo-lookup', async (req, res) => {
   const { moNumber, moCategory, partNumber } = req.body;
@@ -227,10 +202,21 @@ app.post('/api/mo-lookup', async (req, res) => {
 // stale snapshot — so this queries live instead of parsing that file.
 app.get('/api/models', async (req, res) => {
   try {
-    const result = await query('EXEC BOM.dbo.SP_LocationTable_Model_Distinct');
-    res.json({
-      models: result.recordset.map(r => ({ modelRef: r.ModelRef, location: r.Level }))
-    });
+    res.json({ models: await fetchAllModels() });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── API: TPA History — full approval audit log from bom.dbo.ReviewList ─────
+//
+// Read-only: reproduces MonicaTPApprover.exe's own "Approve History" tab
+// (ModelRef/PartNumber/Issuer.../Approver...) for laptops that can't reach
+// TPA itself (same SSPI/domain-trust blocker as TPG — see tools/monica-access/README.md).
+app.get('/api/tpa-history', async (req, res) => {
+  try {
+    res.json({ rows: await fetchReviewHistory() });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -718,81 +704,50 @@ app.post('/api/part-detail', async (req, res) => {
     return res.status(400).json({ error: 'Part number is required.' });
   }
 
-  const pn = partNumber.trim();
-
   try {
-    const bomResult = await query(
-      'SELECT * FROM bom.dbo.SysBom WHERE ParentPartNumber = @pn',
-      [{ name: 'pn', type: sql.NVarChar, value: pn }]
-    );
-    const bomRows = bomResult.recordset;
+    res.json(await buildPartDetail(partNumber.trim()));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
-    // Descriptions live in a separate table, keyed by ChildPartNumber (not a
-    // column on SysBom itself) — batch-fetch the distinct set in one query
-    // rather than one round-trip per row (TPG's own Test BOM grid shows this
-    // per-row, e.g. "NO_DEVICE" -> "NO DEVICE WAS INSTALLED").
-    const childPNs = [...new Set(bomRows.map(r => (r.ChildPartNumber || '').trim()).filter(Boolean))];
-    const descMap = new Map();
-    if (childPNs.length) {
-      const params = childPNs.map((v, i) => ({ name: `pn${i}`, type: sql.NVarChar, value: v }));
-      const placeholders = params.map(p => `@${p.name}`).join(', ');
-      const descResult = await query(
-        `SELECT PartNumber, Description FROM bom.dbo.PartDescription WHERE PartNumber IN (${placeholders})`,
-        params
-      );
-      descResult.recordset.forEach(r => descMap.set(r.PartNumber, r.Description));
-    }
-    // ParentPartNumber is dropped here — it's always just the requested part
-    // number, redundant on every single row of this view.
-    const locationRows = bomRows.map(r => ({
-      Location: r.Location,
-      Type: r.Type,
-      Quantity: r.Quantity,
-      Level: r.Level,
-      ChildPartNumber: r.ChildPartNumber,
-      ChildRevision: r.ChildRevision,
-      Remark: r.Remark,
-      Description: descMap.get((r.ChildPartNumber || '').trim()) || null
-    }));
+// ── API: Golden Template — full CPN catalog across every Model Reference ───
+//
+// Crawls every Model Reference's QVL list, groups the results by Customer
+// Part Number, and caches the result server-side (see
+// services/goldenTemplateService.js). GET builds the catalog once if it has
+// never been built, then serves the cache; POST .../refresh always rebuilds.
+app.get('/api/golden-template/catalog', async (req, res) => {
+  try {
+    res.json(await goldenTemplateService.getCatalog());
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
-    const crdRefRow = findCrdRefRow(bomRows);
-    const crdPN = crdRefRow ? (crdRefRow.ChildPartNumber || '').trim() : null;
+app.post('/api/golden-template/catalog/refresh', async (req, res) => {
+  try {
+    res.json(await goldenTemplateService.refreshCatalog());
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
-    let crd = { specNumber: crdPN, found: false, rows: [] };
-    let fru = { specNumber: crdPN, found: false, rows: [] };
-
-    if (crdPN) {
-      const [crdResult, fruResult] = await Promise.all([
-        query(
-          'SELECT * FROM MSFT_SKU.dbo.CRDspec WHERE SpecNumber = @crdpn ORDER BY Line',
-          [{ name: 'crdpn', type: sql.NVarChar, value: crdPN }]
-        ),
-        query(
-          'SELECT * FROM MSFT_SKU.dbo.FRUspec WHERE SpecNumber = @crdpn ORDER BY Line',
-          [{ name: 'crdpn', type: sql.NVarChar, value: crdPN }]
-        )
-      ]);
-      crd = { specNumber: crdPN, found: crdResult.recordset.length > 0, rows: crdResult.recordset };
-      fru = { specNumber: crdPN, found: fruResult.recordset.length > 0, rows: fruResult.recordset };
-    }
-
-    const itemNumber = pn.split('$')[0];
-    const skuResult = await query(
-      'SELECT TOP 1 * FROM MSFT_SKU.dbo.PartProperties WHERE ItemNumber = @itemNumber',
-      [{ name: 'itemNumber', type: sql.NVarChar, value: itemNumber }]
-    );
-
-    res.json({
-      partNumber: pn,
-      location: { rows: locationRows },
-      crd,
-      fru,
-      rackSku: {
-        itemNumber,
-        found: skuResult.recordset.length > 0,
-        row: skuResult.recordset[0] || null
-      }
-    });
+// ── API: Golden Template — Location/CRD Cfg/FRU Spec/Rack SKU for one CPN ──
+//
+// `variants` is that CPN's known encoded part numbers (from the catalog
+// response) — forwarded by the client rather than looked up server-side, so
+// this route stays stateless with respect to the catalog cache.
+app.post('/api/golden-template/cpn-detail', async (req, res) => {
+  const { cpn, variants } = req.body;
+  if (!cpn?.trim()) {
+    return res.status(400).json({ error: 'cpn is required.' });
+  }
+  try {
+    res.json(await goldenTemplateService.resolveCpnDetail(cpn.trim(), variants));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });

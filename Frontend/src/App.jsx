@@ -8,6 +8,8 @@ import AnomalySidebar from './components/AnomalySidebar'
 import RowDetailModal from './components/RowDetailModal'
 import MoLookupPage from './components/MoLookupPage'
 import TpgCheckPage from './components/TpgCheckPage'
+import TpaHistoryPage from './components/TpaHistoryPage'
+import GoldenTemplatePage from './components/GoldenTemplatePage'
 import CrdTrackerPage from './components/CrdTrackerPage'
 import MsftProjectsPage from './components/MsftProjectsPage'
 import NpiLibraryPage from './components/NpiLibraryPage'
@@ -17,8 +19,10 @@ const PAGES = [
     id: 'test',
     label: 'Test',
     children: [
-      { id: 'tpg-check', label: 'TPG Check' },
-      { id: 'mo',         label: 'Create BOM' },
+      { id: 'tpg-check',       label: 'TPG Check' },
+      { id: 'tpa-history',     label: 'TPA History' },
+      { id: 'mo',              label: 'Create BOM' },
+      { id: 'golden-template', label: 'Golden Template' },
     ],
   },
   {
@@ -82,6 +86,10 @@ export default function App() {
       {activePage === 'mo' && <MoLookupPage onProceedToCompare={proceedToCompare} />}
 
       {activePage === 'tpg-check' && <TpgCheckPage />}
+
+      {activePage === 'tpa-history' && <TpaHistoryPage />}
+
+      {activePage === 'golden-template' && <GoldenTemplatePage />}
 
       {activePage === 'crd-tracker' && <CrdTrackerPage />}
 
