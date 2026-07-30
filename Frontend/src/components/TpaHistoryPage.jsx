@@ -13,6 +13,16 @@ function formatDate(iso) {
   return new Date(iso).toLocaleString()
 }
 
+function toDateInput(d) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+const DEFAULT_TO = new Date()
+const DEFAULT_FROM = new Date(DEFAULT_TO.getTime() - 30 * 24 * 60 * 60 * 1000)
+
 // ApproverReason is tagged by MonicaTPApprover.exe itself, e.g.
 // "[APPROVED] Approve new part number" / "[REJECTED] ..." — surface that
 // tag as a badge instead of making it part of the free-text reason.
@@ -33,19 +43,22 @@ const FILTER_COLUMNS = [
 
 const EMPTY_FILTERS = Object.fromEntries(FILTER_COLUMNS.map(c => [c.key, '']))
 
-// Read-only mirror of MonicaTPApprover.exe's own "Approve History" tab —
-// every row of bom.dbo.ReviewList (who requested a BOM change, who
-// approved/rejected it, and when). See BackEnd/services/tpaHistoryService.js.
+// Mirror of MonicaTPApprover.exe's own "Approve History" tab — who requested
+// a BOM change, who approved/rejected it, and when. Fetched from a live HTTP
+// API (TPA_HISTORY_URL) over a from/to date range rather than a DB snapshot,
+// so it never lags behind real approvals. See BackEnd/services/tpaHistoryService.js.
 export default function TpaHistoryPage() {
   const [rows, setRows]       = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState(null)
   const [filters, setFilters] = useState(EMPTY_FILTERS)
+  const [from, setFrom]       = useState(toDateInput(DEFAULT_FROM))
+  const [to, setTo]           = useState(toDateInput(DEFAULT_TO))
 
-  function refetch() {
+  function refetch(rangeFrom = from, rangeTo = to) {
     setLoading(true)
     setError(null)
-    fetch('/api/tpa-history')
+    fetch(`/api/tpa-history?from=${rangeFrom}&to=${rangeTo}`)
       .then(async res => {
         const json = await res.json()
         if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`)
@@ -85,19 +98,46 @@ export default function TpaHistoryPage() {
 
   const filteredRows = rows.filter(r => rowMatchesFilters(r, null))
 
+  function applyRange(e) {
+    e.preventDefault()
+    refetch(from, to)
+  }
+
   return (
     <div className="app-body">
       <main>
+        <form className="comparison-toolbar" onSubmit={applyRange}>
+          <label className="filter-hint" htmlFor="tpa-history-from">From</label>
+          <input
+            id="tpa-history-from"
+            type="date"
+            className="date-range-input"
+            value={from}
+            max={to}
+            onChange={e => setFrom(e.target.value)}
+          />
+          <label className="filter-hint" htmlFor="tpa-history-to">To</label>
+          <input
+            id="tpa-history-to"
+            type="date"
+            className="date-range-input"
+            value={to}
+            min={from}
+            onChange={e => setTo(e.target.value)}
+          />
+          <button type="submit" className="filter-btn">Apply Range</button>
+        </form>
+
         {loading && (
           <StateBox
             type="loading"
             title="Loading TPA History…"
-            message="Fetching the approval audit log from bom.dbo.ReviewList."
+            message={`Fetching the approval audit log from ${from} to ${to}.`}
           />
         )}
         {!loading && error && <StateBox type="error" message={error} />}
         {!loading && !error && rows.length === 0 && (
-          <StateBox type="empty" title="No TPA History" message="No rows were found in bom.dbo.ReviewList." />
+          <StateBox type="empty" title="No TPA History" message="No rows were found for this date range." />
         )}
 
         {!loading && !error && rows.length > 0 && (
@@ -105,7 +145,7 @@ export default function TpaHistoryPage() {
             <div className="comparison-toolbar">
               <span className="filter-hint">Type in a column header to filter &amp; see suggestions</span>
               <span className="filter-hint">{filteredRows.length} / {rows.length} rows</span>
-              <button className="filter-btn" onClick={refetch}>Reflash</button>
+              <button className="filter-btn" onClick={() => refetch()}>Reflash</button>
               {filtersActive && (
                 <button className="filter-btn" onClick={clearFilters}>Clear Filters</button>
               )}

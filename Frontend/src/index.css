@@ -563,6 +563,18 @@ hr.divider { border: none; border-top: 1px solid var(--border); margin: 1rem 0; 
 
 .filter-hint { font-size: .72rem; color: var(--muted); }
 
+.date-range-input {
+  padding: .28rem .5rem;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: .74rem;
+  outline: none;
+  transition: border-color .15s;
+}
+.date-range-input:focus { border-color: var(--primary); }
+
 /* Per-column filter row: overrides the label-row defaults (uppercase,
    sticky) since this row holds inputs, not column labels. */
 .col-filter-row th {

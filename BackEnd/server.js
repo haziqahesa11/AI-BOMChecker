@@ -13,6 +13,7 @@ const { fetchReviewHistory } = require('./services/tpaHistoryService');
 require('dotenv').config({ path: path.join(__dirname, '..', 'config', 'credentials', 'automation.env') });
 require('dotenv').config({ path: path.join(__dirname, '..', 'config', 'credentials', 'wts.env') });
 require('dotenv').config({ path: path.join(__dirname, '..', 'config', 'credentials', 'npi.env') });
+require('dotenv').config({ path: path.join(__dirname, '..', 'config', 'credentials', 'tpa.env') });
 
 const app = express();
 app.use(express.json());
@@ -209,14 +210,19 @@ app.get('/api/models', async (req, res) => {
   }
 });
 
-// ── API: TPA History — full approval audit log from bom.dbo.ReviewList ─────
+// ── API: TPA History — full approval audit log (via TPA_HISTORY_URL) ───────
 //
-// Read-only: reproduces MonicaTPApprover.exe's own "Approve History" tab
+// Reproduces MonicaTPApprover.exe's own "Approve History" tab
 // (ModelRef/PartNumber/Issuer.../Approver...) for laptops that can't reach
 // TPA itself (same SSPI/domain-trust blocker as TPG — see tools/monica-access/README.md).
+// `from`/`to` (YYYY-MM-DD) are required and forwarded straight to the API.
 app.get('/api/tpa-history', async (req, res) => {
   try {
-    res.json({ rows: await fetchReviewHistory() });
+    const { from, to } = req.query;
+    if (!from || !to) {
+      return res.status(400).json({ error: 'from and to query parameters are required (YYYY-MM-DD)' });
+    }
+    res.json({ rows: await fetchReviewHistory(from, to) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
