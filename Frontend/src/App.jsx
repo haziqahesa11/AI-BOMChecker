@@ -9,6 +9,7 @@ import RowDetailModal from './components/RowDetailModal'
 import MoLookupPage from './components/MoLookupPage'
 import TpgCheckPage from './components/TpgCheckPage'
 import TpaHistoryPage from './components/TpaHistoryPage'
+import CycleTimePage from './components/CycleTimePage'
 import GoldenTemplatePage from './components/GoldenTemplatePage'
 import CrdTrackerPage from './components/CrdTrackerPage'
 import MsftProjectsPage from './components/MsftProjectsPage'
@@ -23,6 +24,7 @@ const PAGES = [
       { id: 'tpa-history',     label: 'TPA History' },
       { id: 'mo',              label: 'Create BOM' },
       { id: 'golden-template', label: 'Golden Template' },
+      { id: 'cycle-time',      label: 'Cycle Time' },
     ],
   },
   {
@@ -90,6 +92,8 @@ export default function App() {
       {activePage === 'tpa-history' && <TpaHistoryPage />}
 
       {activePage === 'golden-template' && <GoldenTemplatePage />}
+
+      {activePage === 'cycle-time' && <CycleTimePage />}
 
       {activePage === 'crd-tracker' && <CrdTrackerPage />}
 

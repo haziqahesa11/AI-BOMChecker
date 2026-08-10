@@ -9,6 +9,7 @@ const { fetchAllModels, fetchQvlList } = require('./services/qvlService');
 const { findCrdRefRow, buildPartDetail } = require('./services/partDetailService');
 const goldenTemplateService = require('./services/goldenTemplateService');
 const { fetchReviewHistory } = require('./services/tpaHistoryService');
+const cycleTimeService = require('./services/cycleTimeService');
 
 require('dotenv').config({ path: path.join(__dirname, '..', 'config', 'credentials', 'automation.env') });
 require('dotenv').config({ path: path.join(__dirname, '..', 'config', 'credentials', 'wts.env') });
@@ -223,6 +224,38 @@ app.get('/api/tpa-history', async (req, res) => {
       return res.status(400).json({ error: 'from and to query parameters are required (YYYY-MM-DD)' });
     }
     res.json({ rows: await fetchReviewHistory(from, to) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── API: Cycle Time — L11 / L10 stage cycle times from SFCS ────────────────
+//
+// Port of two hand-validated SQL scripts (rework exclusion + stage dedup +
+// lag-based cycle time per usn/stage) — see services/cycleTimeService.js.
+// Three lookup modes, matching the frontend's Date Range / Single USN / Model
+// toggle (checked in that priority order):
+//   - `usn` given: exact single-serial lookup, full history.
+//   - `model` given: every usn whose GEN model token contains this text,
+//     full history each.
+//   - otherwise: `from`/`to` (YYYY-MM-DD, optional) pick which usns are in
+//     scope (any activity in that window); each included usn's cycle times
+//     still come from its complete history, never clipped to the range.
+app.get('/api/cycle-time/l11', async (req, res) => {
+  try {
+    const { from, to, usn, model } = req.query;
+    res.json({ rows: await cycleTimeService.getL11CycleTime({ from, to, usn, model }) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/cycle-time/l10', async (req, res) => {
+  try {
+    const { from, to, usn, model } = req.query;
+    res.json({ rows: await cycleTimeService.getL10CycleTime({ from, to, usn, model }) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });

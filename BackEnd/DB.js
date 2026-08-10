@@ -63,6 +63,21 @@ const sfcsPool = new Pool({
   options: "-c timezone=Asia/Kuala_Lumpur",
 });
 
+// Same idle-client crash risk as annonPool below — without this handler a
+// network blip on a pooled-but-idle client would take down the whole process.
+sfcsPool.on('error', (err) => {
+  console.error('Unexpected error on idle Postgres client (sfcsPool):', err);
+});
+
+// Cycle Time reporting only ever reads wymysfcs.sfctransaction/sfcmodel —
+// same read-only enforcement as annonPool, applied here too since this pool
+// now backs live query traffic (services/cycleTimeService.js).
+sfcsPool.on('connect', (client) => {
+  client.query('SET default_transaction_read_only = on').catch((err) => {
+    console.error('Failed to set sfcsPool connection to read-only:', err);
+  });
+});
+
 
 const annonPool = new Pool(annonConnConfig);
 
@@ -90,4 +105,4 @@ annonWritePool.on('error', (err) => {
   console.error('Unexpected error on idle Postgres client (annonWritePool):', err);
 });
 
-module.exports = { sql, getPool, query, closePool, annonPool, annonWritePool };
+module.exports = { sql, getPool, query, closePool, annonPool, annonWritePool, sfcsPool };
