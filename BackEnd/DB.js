@@ -53,29 +53,28 @@ const annonConnConfig = {
 
 
 // SFCS DB (remote)
-// options: force MYT session so TIMESTAMP comparisons align with local stored times
+// options: force MYT session so TIMESTAMP comparisons align with local stored
+// times, and enforce read-only — Cycle Time reporting (services/
+// cycleTimeService.js) only ever reads wymysfcs.sfctransaction/sfcmodel.
+// Both are set as startup parameters (applied synchronously before the
+// connection is usable), NOT via an async 'connect'-event SET query like
+// annonPool below uses — that pattern raced a freshly-opened client's first
+// real query against the handler's own unawaited SET statement (surfaced as
+// a "client already executing a query" deprecation warning while debugging
+// this pool's very first real caller).
 const sfcsPool = new Pool({
   user: "tdp_admin",
   host: "10.251.228.59",
   database: "tdp_db",
   password: "tdp@WYMY",
   port: 5432,
-  options: "-c timezone=Asia/Kuala_Lumpur",
+  options: "-c timezone=Asia/Kuala_Lumpur -c default_transaction_read_only=on",
 });
 
 // Same idle-client crash risk as annonPool below — without this handler a
 // network blip on a pooled-but-idle client would take down the whole process.
 sfcsPool.on('error', (err) => {
   console.error('Unexpected error on idle Postgres client (sfcsPool):', err);
-});
-
-// Cycle Time reporting only ever reads wymysfcs.sfctransaction/sfcmodel —
-// same read-only enforcement as annonPool, applied here too since this pool
-// now backs live query traffic (services/cycleTimeService.js).
-sfcsPool.on('connect', (client) => {
-  client.query('SET default_transaction_read_only = on').catch((err) => {
-    console.error('Failed to set sfcsPool connection to read-only:', err);
-  });
 });
 
 

@@ -73,9 +73,7 @@ async function runCycleTimeForUsns(usns, stageOrder, { includeModel = true } = {
   // body identical either way) — includeModel only controls whether it
   // reaches the final result set, per each stage's own reference script
   // (L11's includes it, L10's latest script does not).
-  const finalCols = includeModel
-    ? 'usn, upn, stage, model_describe, trndate, prev_stage_trndate'
-    : 'usn, upn, stage, trndate, prev_stage_trndate';
+  const modelCol = includeModel ? 'model_describe, ' : '';
   const sqlText = `
     with FirstRework as (
       select s.usn, min(s.trndate) as rework_time
@@ -110,7 +108,18 @@ async function runCycleTimeForUsns(usns, stageOrder, { includeModel = true } = {
         ) as prev_stage_trndate
       from DeduplicatedStages ds
     )
-    select ${finalCols},
+    select usn, upn, stage, ${modelCol}
+      -- trndate/sfctransaction is "timestamp without time zone" — no offset
+      -- is stored. to_char() here prints those exact stored digits as plain
+      -- text with zero timezone math, so this always matches what any SQL
+      -- client shows. Sending the raw timestamp instead would go through
+      -- node-pg's Date parsing (which uses the RUNNING SERVER's OS timezone,
+      -- not the DB's) and then JSON's forced-UTC serialization — two
+      -- unrelated timezones neither of which is "the value that's stored" —
+      -- and silently show a different wall-clock time depending on where
+      -- this backend process happens to be running.
+      to_char(trndate, 'YYYY-MM-DD HH24:MI:SS') as trndate,
+      to_char(prev_stage_trndate, 'YYYY-MM-DD HH24:MI:SS') as prev_stage_trndate,
       case
         when prev_stage_trndate is null then to_char(trndate, 'HH24:MI:SS')
         else to_char(trndate - prev_stage_trndate, 'HH24:MI:SS')

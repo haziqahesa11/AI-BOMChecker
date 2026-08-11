@@ -889,3 +889,42 @@ hr.divider { border: none; border-top: 1px solid var(--border); margin: 1rem 0; 
   border-top: 1px solid var(--border);
   line-height: 1.4;
 }
+
+/* ── First Pass Yield ── */
+.filter-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+.fpy-report { display: flex; flex-direction: column; gap: 1.5rem; }
+
+.fpy-summary-table { max-width: 480px; }
+.fpy-summary-table th:not(:first-child), .fpy-summary-table td:not(:first-child) { text-align: right; }
+.fpy-total-row td { border-top: 2px solid var(--border2); font-weight: 700; }
+
+.fpy-chart-title {
+  font-size: .68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  color: var(--muted);
+  margin: 0 0 .75rem;
+}
+
+.fpy-legend { display: flex; gap: 1.25rem; align-items: center; margin-bottom: .5rem; font-size: .72rem; color: var(--muted); }
+.fpy-swatch { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: .4rem; vertical-align: middle; }
+.fpy-linekey { display: inline-block; width: 14px; height: 2px; margin-right: .4rem; vertical-align: middle; }
+
+.fpy-tooltip {
+  position: absolute;
+  top: 4px;
+  transform: translateX(-50%);
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: .55rem .75rem;
+  font-size: .75rem;
+  color: var(--text);
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 5;
+}
+.fpy-tooltip-title { font-weight: 700; margin-bottom: .25rem; }

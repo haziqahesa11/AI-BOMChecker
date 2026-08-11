@@ -10,6 +10,7 @@ const { findCrdRefRow, buildPartDetail } = require('./services/partDetailService
 const goldenTemplateService = require('./services/goldenTemplateService');
 const { fetchReviewHistory } = require('./services/tpaHistoryService');
 const cycleTimeService = require('./services/cycleTimeService');
+const firstPassYieldService = require('./services/firstPassYieldService');
 
 require('dotenv').config({ path: path.join(__dirname, '..', 'config', 'credentials', 'automation.env') });
 require('dotenv').config({ path: path.join(__dirname, '..', 'config', 'credentials', 'wts.env') });
@@ -256,6 +257,34 @@ app.get('/api/cycle-time/l10', async (req, res) => {
   try {
     const { from, to, usn, model } = req.query;
     res.json({ rows: await cycleTimeService.getL10CycleTime({ from, to, usn, model }) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── API: First Pass Yield — blade (L10) fail data from SFCS ────────────────
+//
+// Port of the hand-validated "--blade FPY" SQL script — see
+// services/firstPassYieldService.js. Same Date Range / Single USN / Model
+// lookup-mode convention as Cycle Time above.
+app.get('/api/first-pass-yield/blade', async (req, res) => {
+  try {
+    const { from, to, usn, model } = req.query;
+    res.json({ rows: await firstPassYieldService.getBladeFpy({ from, to, usn, model }) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Computed weekly FPY summary (with/without fail counts + top failures) for
+// a model + environment — see services/firstPassYieldService.js for the
+// population/with-fail definitions.
+app.get('/api/first-pass-yield/summary', async (req, res) => {
+  try {
+    const { from, to, model, environment } = req.query;
+    res.json(await firstPassYieldService.getFpySummary({ from, to, model, environment }));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });

@@ -10,6 +10,7 @@ import MoLookupPage from './components/MoLookupPage'
 import TpgCheckPage from './components/TpgCheckPage'
 import TpaHistoryPage from './components/TpaHistoryPage'
 import CycleTimePage from './components/CycleTimePage'
+import FirstPassYieldPage from './components/FirstPassYieldPage'
 import GoldenTemplatePage from './components/GoldenTemplatePage'
 import CrdTrackerPage from './components/CrdTrackerPage'
 import MsftProjectsPage from './components/MsftProjectsPage'
@@ -25,6 +26,7 @@ const PAGES = [
       { id: 'mo',              label: 'Create BOM' },
       { id: 'golden-template', label: 'Golden Template' },
       { id: 'cycle-time',      label: 'Cycle Time' },
+      { id: 'first-pass-yield', label: 'First Pass Yield' },
     ],
   },
   {
@@ -94,6 +96,8 @@ export default function App() {
       {activePage === 'golden-template' && <GoldenTemplatePage />}
 
       {activePage === 'cycle-time' && <CycleTimePage />}
+
+      {activePage === 'first-pass-yield' && <FirstPassYieldPage />}
 
       {activePage === 'crd-tracker' && <CrdTrackerPage />}
 
