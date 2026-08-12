@@ -1,0 +1,6 @@
+httpx>=0.28
+PyYAML>=6.0
+
+# test-only
+pytest>=8.0
+respx>=0.21

@@ -15,6 +15,7 @@ import GoldenTemplatePage from './components/GoldenTemplatePage'
 import CrdTrackerPage from './components/CrdTrackerPage'
 import MsftProjectsPage from './components/MsftProjectsPage'
 import NpiLibraryPage from './components/NpiLibraryPage'
+import AiDashboardPage from './components/AiDashboardPage'
 
 const PAGES = [
   {
@@ -27,6 +28,7 @@ const PAGES = [
       { id: 'golden-template', label: 'Golden Template' },
       { id: 'cycle-time',      label: 'Cycle Time' },
       { id: 'first-pass-yield', label: 'First Pass Yield' },
+      { id: 'ai-dashboard',    label: 'AI Dashboard' },
     ],
   },
   {
@@ -98,6 +100,8 @@ export default function App() {
       {activePage === 'cycle-time' && <CycleTimePage />}
 
       {activePage === 'first-pass-yield' && <FirstPassYieldPage />}
+
+      {activePage === 'ai-dashboard' && <AiDashboardPage />}
 
       {activePage === 'crd-tracker' && <CrdTrackerPage />}
 

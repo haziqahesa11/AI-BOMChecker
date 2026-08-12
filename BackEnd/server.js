@@ -11,11 +11,13 @@ const goldenTemplateService = require('./services/goldenTemplateService');
 const { fetchReviewHistory } = require('./services/tpaHistoryService');
 const cycleTimeService = require('./services/cycleTimeService');
 const firstPassYieldService = require('./services/firstPassYieldService');
+const aiPredictionService = require('./services/aiPredictionService');
 
 require('dotenv').config({ path: path.join(__dirname, '..', 'config', 'credentials', 'automation.env') });
 require('dotenv').config({ path: path.join(__dirname, '..', 'config', 'credentials', 'wts.env') });
 require('dotenv').config({ path: path.join(__dirname, '..', 'config', 'credentials', 'npi.env') });
 require('dotenv').config({ path: path.join(__dirname, '..', 'config', 'credentials', 'tpa.env') });
+require('dotenv').config({ path: path.join(__dirname, '..', 'config', 'credentials', 'ollama.env') });
 
 const app = express();
 app.use(express.json());
@@ -285,6 +287,24 @@ app.get('/api/first-pass-yield/summary', async (req, res) => {
   try {
     const { from, to, model, environment } = req.query;
     res.json(await firstPassYieldService.getFpySummary({ from, to, model, environment }));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── API: AI Dashboard — Cycle Time (PT) + FPY (MFG/MDAAS) + part info + an
+// Ollama-generated narrative for one Model (GEN token, e.g. "GEN9") + Part Number.
+// See services/aiPredictionService.js for why Model here is the GEN token
+// cycleTimeService/firstPassYieldService use, not the QVL Model Reference
+// /api/models returns. A down/unconfigured Ollama never fails this route — the
+// response's `prediction.available` is false instead, with everything else intact.
+app.post('/api/ai-dashboard/predict', async (req, res) => {
+  const { model, partNumber } = req.body;
+  if (!model?.trim()) return res.status(400).json({ error: 'model is required.' });
+  if (!partNumber?.trim()) return res.status(400).json({ error: 'partNumber is required.' });
+  try {
+    res.json(await aiPredictionService.predict({ model, partNumber }));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
