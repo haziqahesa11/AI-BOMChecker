@@ -66,4 +66,70 @@ function stageStats(rows, stage) {
   };
 }
 
-module.exports = { parseDurationToSeconds, stageDurationsSeconds, stageStats, formatSeconds };
+// One point per calendar day (from trndate) with >=1 measured PT duration, sorted
+// ascending. Reports both mean and median per day — median is what trend/projection
+// math should fit on: real PT durations are heavily right-skewed (confirmed live,
+// e.g. one GEN9 sample: mean 04:29:42 vs. median 02:13:13, max 23:30:57), so a small
+// day's sample mean is easily dragged around by a single long outlier in a way its
+// median isn't. Days with zero qualifying rows are omitted rather than zero-filled —
+// a 30-day window can have real gaps (weekends, low-volume days) that aren't "zero
+// cycle time," they're "no data," and those are different things to plot.
+function stageDailyTrend(rows, stage) {
+  const byDay = new Map(); // "YYYY-MM-DD" -> seconds[]
+  for (const r of rows) {
+    if (r.stage !== stage || !r.prev_stage_trndate) continue;
+    const seconds = parseDurationToSeconds(r.cycle_time);
+    if (seconds === null) continue;
+    const day = (r.trndate || '').slice(0, 10);
+    if (!day) continue;
+    if (!byDay.has(day)) byDay.set(day, []);
+    byDay.get(day).push(seconds);
+  }
+  return [...byDay.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, seconds]) => {
+      seconds.sort((a, b) => a - b);
+      const avg = seconds.reduce((a, b) => a + b, 0) / seconds.length;
+      const med = median(seconds);
+      return {
+        date,
+        sampleCount: seconds.length,
+        avgSeconds: avg,
+        avgFormatted: formatSeconds(avg),
+        medianSeconds: med,
+        medianFormatted: formatSeconds(med),
+      };
+    });
+}
+
+// Fixed hour-wide buckets spanning the real observed PT range (minutes to 24h+) —
+// a fixed scheme (vs. computing bucket width from the data) keeps bucket boundaries
+// stable and comparable across separate requests/models rather than shifting with
+// whatever happens to be in this particular result set.
+const HISTOGRAM_BUCKET_EDGES_HOURS = [0, 1, 2, 4, 8, 16, 24, Infinity];
+
+function stageHistogram(rows, stage) {
+  const buckets = HISTOGRAM_BUCKET_EDGES_HOURS.slice(0, -1).map((lo, i) => {
+    const hi = HISTOGRAM_BUCKET_EDGES_HOURS[i + 1];
+    return {
+      label: hi === Infinity ? `${lo}h+` : `${lo}-${hi}h`,
+      loSeconds: lo * 3600,
+      hiSeconds: hi * 3600,
+      count: 0,
+    };
+  });
+  for (const seconds of stageDurationsSeconds(rows, stage)) {
+    const bucket = buckets.find((b) => seconds >= b.loSeconds && seconds < b.hiSeconds);
+    if (bucket) bucket.count += 1;
+  }
+  return buckets.map(({ label, count }) => ({ label, count }));
+}
+
+module.exports = {
+  parseDurationToSeconds,
+  stageDurationsSeconds,
+  stageStats,
+  stageDailyTrend,
+  stageHistogram,
+  formatSeconds,
+};

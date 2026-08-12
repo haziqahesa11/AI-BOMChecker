@@ -46,7 +46,12 @@ class ExtractorConfig:
 
 
 def load_config(env_path: Path | None = None) -> ExtractorConfig:
-    path = env_path or Path(os.environ.get("NEXAI_EXTRACTOR_ENV", "")).expanduser() or _DEFAULT_ENV_PATH
+    # NOTE: Path("").expanduser() resolves to Path(".") — a real, truthy Path — so
+    # `Path(os.environ.get(...)) or _DEFAULT_ENV_PATH` never falls through even when
+    # the env var is unset. Check the raw string's truthiness first, before
+    # constructing a Path from it, to actually get the intended fallback behavior.
+    env_var = os.environ.get("NEXAI_EXTRACTOR_ENV", "").strip()
+    path = env_path or (Path(env_var).expanduser() if env_var else _DEFAULT_ENV_PATH)
     env_file = _parse_env_file(path)
 
     base_url = _get(env_file, "AI_BOM_API_BASE_URL")

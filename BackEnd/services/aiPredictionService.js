@@ -18,7 +18,7 @@
 const cycleTimeService = require('./cycleTimeService');
 const firstPassYieldService = require('./firstPassYieldService');
 const { buildPartDetail } = require('./partDetailService');
-const { stageStats } = require('./cycleTimeStats');
+const { stageStats, stageDailyTrend, stageHistogram } = require('./cycleTimeStats');
 const ollamaClient = require('./ollamaClient');
 
 const PT_STAGE = 'PT';
@@ -136,7 +136,11 @@ async function predict({ model, partNumber }) {
   const modelRows = recentRows.filter((r) =>
     (r.model_describe || '').toUpperCase().includes(trimmedModel.toUpperCase())
   );
-  const cycleTimePt = stageStats(modelRows, PT_STAGE);
+  const cycleTimePt = {
+    ...stageStats(modelRows, PT_STAGE),
+    dailyTrend: stageDailyTrend(modelRows, PT_STAGE),
+    histogram: stageHistogram(modelRows, PT_STAGE),
+  };
   const fpy = { MFG: fpyMfg, MDAAS: fpyMdaas };
 
   let partDetail = null;

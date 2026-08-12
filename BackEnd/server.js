@@ -48,6 +48,28 @@ const BUILD_ID = computeBuildId();
 
 app.get('/api/version', (req, res) => res.json({ buildId: BUILD_ID }));
 
+// ── API: BOM Workflow — final submit ────────────────────────────────────────
+//
+// The BOM Workflow page's last stage ("Upload to Database"). Deliberately has
+// no DB import/pool reference anywhere in this handler — unlike every other
+// route in this file, it can't touch bom.dbo.*, MSFT_SKU.dbo.*, annonPool, or
+// sfcsPool even by accident. It validates the payload and hands back a
+// reference ID so the confirmation looks and behaves like a real save, but
+// nothing is persisted anywhere (same "presentation only" contract as the CRD
+// Tracker's in-memory Test rows, minus even the in-memory part — there's
+// nothing here to lose on restart because nothing is ever stored).
+app.post('/api/bomguard-workflow/submit', (req, res) => {
+  const { cpn } = req.body || {};
+  if (!cpn?.trim()) {
+    return res.status(400).json({ error: 'cpn is required.' });
+  }
+  res.json({
+    submitted: true,
+    referenceId: 'BG-' + Date.now().toString(36).toUpperCase(),
+    submittedAt: new Date().toISOString(),
+  });
+});
+
 // ── API: compare BOM vs CRD ────────────────────────────────────────────────
 app.post('/api/compare', async (req, res) => {
   const { partNumber } = req.body;

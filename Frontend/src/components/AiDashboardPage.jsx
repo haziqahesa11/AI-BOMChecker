@@ -1,76 +1,19 @@
 import { useState } from 'react'
 import StateBox from './StateBox'
 import PartDetailTabs from './PartDetailTabs'
+import {
+  MODELS,
+  PROJECTION_STEPS,
+  CycleTimeStatsTable,
+  FpyStatsTable,
+  CycleTimeTrendChart,
+  CycleTimeHistogramChart,
+  FpyTrendChart,
+  FailuresParetoChart,
+  PredictionPanel,
+} from './charts/CycleTimeFpyCharts'
 
-// GEN token vocabulary, matching FirstPassYieldPage.jsx's MODELS — Cycle Time and
-// First Pass Yield are both scoped by this token, not the QVL Model Reference
-// /api/models returns (see BackEnd/services/aiPredictionService.js's top comment).
-// BSL/other stages are deferred by design; only PT (Power On Test, L11/rack test)
-// and the MFG/MDAAS environments are covered for now.
-const MODELS = ['GEN9', 'GEN8']
-const ENVIRONMENTS = ['MFG', 'MDAAS']
 const PN_PLACEHOLDER = 'e.g. M1246491-001'
-
-function CycleTimeStatsTable({ stats }) {
-  return (
-    <table className="fpy-summary-table">
-      <thead>
-        <tr><th>Samples</th><th>Average</th><th>Median</th><th>Min</th><th>Max</th></tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td className="mono">{stats.sampleCount}</td>
-          <td className="mono">{stats.avgFormatted ?? '—'}</td>
-          <td className="mono">{stats.medianFormatted ?? '—'}</td>
-          <td className="mono">{stats.minFormatted ?? '—'}</td>
-          <td className="mono">{stats.maxFormatted ?? '—'}</td>
-        </tr>
-      </tbody>
-    </table>
-  )
-}
-
-function FpyStatsTable({ fpy }) {
-  return (
-    <table className="fpy-summary-table">
-      <thead>
-        <tr><th>Environment</th><th>Total</th><th>Without Fail</th><th>With Fail</th><th>FPY %</th></tr>
-      </thead>
-      <tbody>
-        {ENVIRONMENTS.map(env => {
-          const t = fpy[env].totals
-          return (
-            <tr key={env}>
-              <td>{env}</td>
-              <td className="mono">{t.total}</td>
-              <td className="mono" style={{ color: 'var(--pass-fg)' }}>{t.withoutFail}</td>
-              <td className="mono" style={{ color: 'var(--fail-fg)' }}>{t.withFail}</td>
-              <td className="mono">{t.pctWithoutFail.toFixed(2)}%</td>
-            </tr>
-          )
-        })}
-      </tbody>
-    </table>
-  )
-}
-
-function PredictionPanel({ prediction }) {
-  if (prediction.available) {
-    return (
-      <div className="mo-result">
-        <h3>AI Prediction</h3>
-        <p style={{ whiteSpace: 'pre-wrap' }}>{prediction.narrative}</p>
-      </div>
-    )
-  }
-  return (
-    <StateBox
-      type="error"
-      title="AI Narrative Unavailable"
-      message={`${prediction.reason} — the stats above are still real and current; only the generated narrative is missing.`}
-    />
-  )
-}
 
 export default function AiDashboardPage() {
   const [model, setModel] = useState('GEN9')
@@ -79,6 +22,27 @@ export default function AiDashboardPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [hasFetched, setHasFetched] = useState(false)
+
+  // Editing the model or part number after already having a result must not leave
+  // that stale result on screen under the new input — that reads as "these are the
+  // numbers for what I just typed" when they're actually from the previous submit.
+  function clearStaleResult() {
+    if (result || error) {
+      setResult(null)
+      setError(null)
+      setHasFetched(false)
+    }
+  }
+
+  function handleModelChange(m) {
+    setModel(m)
+    clearStaleResult()
+  }
+
+  function handlePartNumberChange(value) {
+    setPartNumber(value)
+    clearStaleResult()
+  }
 
   function handleSubmit(e) {
     e.preventDefault()
@@ -106,7 +70,7 @@ export default function AiDashboardPage() {
       <main>
         <div className="filter-btns" style={{ marginBottom: '.75rem' }}>
           {MODELS.map(m => (
-            <button key={m} type="button" className={`filter-btn ${model === m ? 'active' : ''}`} onClick={() => setModel(m)}>
+            <button key={m} type="button" className={`filter-btn ${model === m ? 'active' : ''}`} onClick={() => handleModelChange(m)}>
               {m}
             </button>
           ))}
@@ -119,7 +83,7 @@ export default function AiDashboardPage() {
             type="text"
             className="pn-input"
             value={partNumber}
-            onChange={e => setPartNumber(e.target.value)}
+            onChange={e => handlePartNumberChange(e.target.value)}
             placeholder={PN_PLACEHOLDER}
             autoComplete="off"
             spellCheck="false"
@@ -133,7 +97,7 @@ export default function AiDashboardPage() {
           <StateBox
             type="empty"
             title="Pick a Model and Part Number"
-            message="Choose GEN9 or GEN8, type a Part Number, and click Analyze to pull Cycle Time (PT), First Pass Yield (MFG/MDAAS), part info, and an AI-generated prediction."
+            message="Choose GEN9 or GEN8, type a Part Number, and click Analyze to pull Cycle Time (PT), First Pass Yield (MFG/MDAAS), part info, trend charts, and an AI-generated prediction."
           />
         )}
         {loading && (
@@ -149,13 +113,25 @@ export default function AiDashboardPage() {
           <div className="fpy-report">
             <h3 className="fpy-chart-title">Cycle Time — PT Stage ({result.model})</h3>
             <CycleTimeStatsTable stats={result.cycleTimePt} />
+            <p className="filter-hint" style={{ margin: '.75rem 0 .25rem' }}>Daily trend (median), last 30 days, with a {PROJECTION_STEPS}-day linear projection</p>
+            <CycleTimeTrendChart dailyTrend={result.cycleTimePt.dailyTrend} />
+            <p className="filter-hint" style={{ margin: '1.25rem 0 .25rem' }}>Duration distribution</p>
+            <CycleTimeHistogramChart histogram={result.cycleTimePt.histogram} />
 
-            <h3 className="fpy-chart-title">First Pass Yield ({result.model})</h3>
+            <h3 className="fpy-chart-title" style={{ marginTop: '1.5rem' }}>First Pass Yield ({result.model})</h3>
             <FpyStatsTable fpy={result.fpy} />
+            <p className="filter-hint" style={{ margin: '.75rem 0 .25rem' }}>Weekly trend, with a {PROJECTION_STEPS}-week linear projection</p>
+            <FpyTrendChart fpy={result.fpy} />
+
+            <h3 className="fpy-chart-title" style={{ marginTop: '1.5rem' }}>Top Failures — MFG</h3>
+            <FailuresParetoChart topFailures={result.fpy.MFG.topFailures} envLabel="MFG" />
+
+            <h3 className="fpy-chart-title" style={{ marginTop: '1.5rem' }}>Top Failures — MDAAS</h3>
+            <FailuresParetoChart topFailures={result.fpy.MDAAS.topFailures} envLabel="MDAAS" />
 
             <PredictionPanel prediction={result.prediction} />
 
-            <h3 className="fpy-chart-title">Part Information — {result.partNumber}</h3>
+            <h3 className="fpy-chart-title" style={{ marginTop: '1.5rem' }}>Part Information — {result.partNumber}</h3>
             {result.partDetail ? (
               <PartDetailTabs partDetail={result.partDetail} />
             ) : (

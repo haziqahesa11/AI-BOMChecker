@@ -22,6 +22,15 @@
   --warn-border:  rgba(251,191,36,.3);
   --info-fg:      #60a5fa;
   --purple-fg:    #a78bfa;
+  /* Categorical pair for 2-series charts (e.g. AI Dashboard's MFG vs MDAAS trend) —
+     slots 1-2 of the dataviz skill's validated 8-hue default theme, NOT --info-fg/
+     --purple-fg: that pair fails the skill's own CVD/normal-vision checks (ΔE 0.3
+     deutan, 10.2 normal — practically indistinguishable). Verified via
+     scripts/validate_palette.js against this file's real --surface: all checks pass
+     in both modes. Fixed order — series-1 is always the first category, series-2
+     the second; never reassigned based on which value is "worse" this week. */
+  --series1-fg:   #3987e5;
+  --series2-fg:   #d95926;
   --grey-bg:      #161920;
   --grey-fg:      #7d8fa3;
   --grey-border:  #1e2535;
@@ -57,6 +66,8 @@
   --warn-border:  rgba(180,83,9,.3);
   --info-fg:      #2563eb;
   --purple-fg:    #7c3aed;
+  --series1-fg:   #2a78d6;
+  --series2-fg:   #eb6834;
   --grey-bg:      #eef0f3;
   --grey-fg:      #475569;
   --grey-border:  #dfe3e8;
@@ -928,3 +939,54 @@ hr.divider { border: none; border-top: 1px solid var(--border); margin: 1rem 0; 
   z-index: 5;
 }
 .fpy-tooltip-title { font-weight: 700; margin-bottom: .25rem; }
+
+/* ── BOM Workflow — step indicator ── */
+.wizard-steps { display: flex; align-items: flex-start; flex-wrap: wrap; gap: .25rem; margin-bottom: 1.5rem; }
+.wizard-step-wrap { display: flex; align-items: center; flex: 1 1 auto; min-width: 0; }
+.wizard-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .3rem;
+  background: none;
+  border: none;
+  padding: .25rem .4rem;
+  color: var(--muted);
+  font-size: .64rem;
+  text-align: center;
+  cursor: pointer;
+}
+.wizard-step:disabled { cursor: default; }
+.wizard-step-node {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--border2);
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--muted);
+  background: var(--surface2);
+}
+.wizard-step-label { white-space: nowrap; text-transform: uppercase; letter-spacing: .04em; font-weight: 600; }
+.wizard-step.current .wizard-step-node { border-color: var(--primary); color: var(--primary); background: rgba(217,180,81,.15); }
+.wizard-step.current .wizard-step-label { color: var(--text); }
+.wizard-step.done .wizard-step-node { border-color: var(--pass-fg); color: var(--pass-fg); background: var(--pass-bg); }
+.wizard-step.done:hover .wizard-step-node { box-shadow: 0 0 0 3px var(--pass-bg); }
+.wizard-step-connector { flex: 1 1 20px; min-width: 12px; height: 2px; background: var(--border); margin: 13px .25rem 0; }
+.wizard-step-connector.done { background: var(--pass-fg); opacity: .5; }
+
+/* ── BOM Workflow — MO-detected row highlights, extending .row-pass/.row-fail/.row-bom/.row-crd ── */
+.row-new  { background: rgba(59,130,246,.07); }
+.row-warn { background: rgba(251,191,36,.07); }
+
+/* ── BOM Workflow — print sheet ── */
+@media print {
+  .bomguard-header, .update-banner, .no-print { display: none !important; }
+  .app-body, main { display: block; padding: 0; margin: 0; max-width: none; }
+  .print-sheet { color: #000; }
+  .print-sheet .table-wrap { overflow: visible; }
+  body { background: #fff; }
+}

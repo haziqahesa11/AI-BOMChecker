@@ -16,6 +16,7 @@ import CrdTrackerPage from './components/CrdTrackerPage'
 import MsftProjectsPage from './components/MsftProjectsPage'
 import NpiLibraryPage from './components/NpiLibraryPage'
 import AiDashboardPage from './components/AiDashboardPage'
+import BomguardWorkflowPage from './components/BomguardWorkflowPage'
 
 const PAGES = [
   {
@@ -41,6 +42,7 @@ const PAGES = [
   },
   { id: 'msft-projects', label: 'MSFT Projects' },
   { id: 'bom', label: 'BOM Compare' },
+  { id: 'bomguard-workflow', label: 'BOM Workflow' },
 ]
 
 export default function App() {
@@ -108,6 +110,8 @@ export default function App() {
       {activePage === 'msft-projects' && <MsftProjectsPage />}
 
       {activePage === 'npi-library' && <NpiLibraryPage />}
+
+      {activePage === 'bomguard-workflow' && <BomguardWorkflowPage />}
 
       {activePage === 'bom' && (
         <>
